@@ -1,29 +1,652 @@
-javascript:(function(){function%20a(b){function%20c(a){o%26%26a.preventDefault()}function%20d(a,b){o=!0,document.body.style.overflow=%22hidden%22,document.addEventListener(%22touchmove%22,c,{passive:!1});const%20d=j.getBoundingClientRect();p=a-d.left,q=b-d.top}function%20f(a,b){o%26%26(j.style.left=a-p+%22px%22,j.style.top=b-q+%22px%22)}function%20g(){o=!1,document.body.style.overflow=%22%22,document.removeEventListener(%22touchmove%22,c,{passive:!1})}const%20h=document.getElementById(%22uiverseGui%22);h%26%26h.remove();const%20i=document.createElement(%22style%22);i.textContent=`
-%20%20%20%20%20%20%20%20%23uiverseGui%20{%20position:%20fixed;%20padding:%201em;%20background:%20%23f0f0f0;%20border-radius:%20.8em;
-%20%20%20%20%20%20%20%20%20%20%20%20box-shadow:%204px%204px%2012px%20%23c5c5c5,%20-4px%20-4px%2012px%20%23ffffff;%20z-index:%2099999;
-%20%20%20%20%20%20%20%20%20%20%20%20display:%20flex;%20flex-direction:%20column;%20align-items:%20center;%20justify-content:%20center;
-%20%20%20%20%20%20%20%20%20%20%20%20gap:%2015px;%20user-select:%20none;%20font-family:%20Verdana,%20arial,%20helvetica,%20clean,%20sans-serif;
-%20%20%20%20%20%20%20%20%20%20%20%20color:%20%23090909;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20.header%20{%20width:%20100%25;%20height:%205px;%20display:%20flex;%20justify-content:%20flex-end;
-%20%20%20%20%20%20%20%20%20%20%20%20align-items:%20center;%20cursor:%20move;%20margin-bottom:%200;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20.closeBtn%20{%20cursor:%20pointer;%20font-weight:%20bold;%20font-size:%2014px;
-%20%20%20%20%20%20%20%20%20%20%20%20background:%20transparent;%20border:%20none;%20color:%20%23090909;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20.title%20{%20font-size:%2018px;%20font-weight:%20bold;%20text-align:%20center;%20margin-bottom:%2010px;
-%20%20%20%20%20%20%20%20%20%20%20%20user-select:%20none;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20.device-label,%20%23uiverseGui%20.auto-label%20{%20font-size:%2016px;%20font-weight:%20bold;
-%20%20%20%20%20%20%20%20%20%20%20%20text-align:%20center;%20margin-bottom:%205px;%20user-select:%20none;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20button.uiverseBtn%20{%20color:%20%23090909;%20padding:%20.4em%201em;%20font-size:%2016px;%20font-weight:%20bold;
-%20%20%20%20%20%20%20%20%20%20%20%20border-radius:%20.5em;%20background:%20%23e8e8e8;%20cursor:%20pointer;%20border:%201px%20solid%20%23e8e8e8;
-%20%20%20%20%20%20%20%20%20%20%20%20transition:%20all%20.3s%20ease;%20box-shadow:%206px%206px%2012px%20%23c5c5c5,%20-6px%20-6px%2012px%20%23ffffff;
-%20%20%20%20%20%20%20%20%20%20%20%20display:%20block;%20user-select:%20none;%20margin-top:%202px;%20text-align:%20center;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20button.uiverseBtn:hover%20{%20border:%201px%20solid%20%23fff;%20}
-%20%20%20%20%20%20%20%20%23uiverseGui%20button.uiverseBtn:active%20{%20box-shadow:%204px%204px%2012px%20%23c5c5c5,%20-4px%20-4px%2012px%20%23ffffff;%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20{%20position:%20relative;%20width:%2050px;%20height:%2025px;%20margin:%200%20auto;%20user-select:%20none;%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20input%20{%20opacity:%200;%20width:%200;%20height:%200;%20position:%20absolute;%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20label%20{%20position:%20absolute;%20top:%200;%20left:%200;%20width:%2050px;%20height:%2025px;%20border-radius:%2050px;
-%20%20%20%20%20%20%20%20%20%20%20%20background:%20linear-gradient(to%20bottom,%20%23b3b3b3,%20%23e6e6e6);%20cursor:%20pointer;%20transition:%20all%20.3s%20ease;%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20label:after%20{%20content:%20'';%20position:%20absolute;%20top:%201px;%20left:%201px;%20width:%2023px;%20height:%2023px;
-%20%20%20%20%20%20%20%20%20%20%20%20border-radius:%2050%25;%20background:%20%23fff;%20box-shadow:%200%201px%203px%20rgba(0,0,0,.3);%20transition:%20all%20.3s%20ease;%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20input:checked%20+%20label%20{%20background:%20linear-gradient(to%20bottom,%20%234cd964,%20%235de24e);%20}
-%20%20%20%20%20%20%20%20.checkbox-apple%20input:checked%20+%20label:after%20{%20transform:%20translateX(25px);%20}
-%20%20%20%20`,document.head.appendChild(i);const%20j=document.createElement(%22div%22);j.id=%22uiverseGui%22;const%20k=document.createElement(%22div%22);k.className=%22header%22;const%20l=document.createElement(%22button%22);l.className=%22closeBtn%22,l.textContent=%22\xD7%22,l.onclick=()=%3E{j.remove(),document.body.style.overflow=%22%22,document.removeEventListener(%22touchmove%22,c,{passive:!1})},k.appendChild(l),j.appendChild(k);const%20m=document.createElement(%22div%22);if(m.className=%22title%22,m.textContent=%22Term%20Client%22,j.appendChild(m),%22autoMode%22===b){const%20a=document.createElement(%22div%22);a.className=%22auto-label%22,a.textContent=%22Auto%20Mode%22,j.appendChild(a);const%20b=document.createElement(%22div%22);b.className=%22checkbox-apple%22;const%20c=document.createElement(%22input%22);c.type=%22checkbox%22,c.id=%22appleCheckbox%22;const%20d=document.createElement(%22label%22);d.htmlFor=%22appleCheckbox%22,b.appendChild(c),b.appendChild(d),j.appendChild(b),c.addEventListener(%22change%22,()=%3E{const%20a=new%20KeyboardEvent(%22keydown%22,{key:%22y%22,keyCode:89,code:%22KeyY%22,bubbles:!0,cancelable:!0});window.dispatchEvent(a)});const%20e=document.createElement(%22button%22);e.className=%22uiverseBtn%22,e.textContent=%22Once%22,e.onclick=()=%3E{const%20a=new%20KeyboardEvent(%22keydown%22,{key:%22c%22,keyCode:67,code:%22KeyC%22,bubbles:!0,cancelable:!0});window.dispatchEvent(a)},j.appendChild(e)}else{const%20b=document.createElement(%22div%22);b.className=%22device-label%22,b.textContent=%22Choose%20your%20device%22,j.appendChild(b),[%22Mobile%22,%22Computer%22].forEach(c=%3E{const%20d=document.createElement(%22button%22);d.className=%22uiverseBtn%22,d.textContent=c,d.onclick=()=%3E{a(%22autoMode%22)},j.appendChild(d)})}document.body.appendChild(j);const%20n=j.getBoundingClientRect();j.style.left=(window.innerWidth-n.width)/2+%22px%22,j.style.top=(window.innerHeight-n.height)/2+%22px%22;let%20o=!1,p=0,q=0;j.addEventListener(%22mousedown%22,a=%3E{a.target.closest(%22button%22)||a.target.closest(%22input%22)||a.target.closest(%22label%22)||d(a.clientX,a.clientY)}),document.addEventListener(%22mousemove%22,a=%3Ef(a.clientX,a.clientY)),document.addEventListener(%22mouseup%22,g),j.addEventListener(%22touchstart%22,a=%3E{const%20b=a.touches[0];a.target.closest(%22button%22)||a.target.closest(%22input%22)||a.target.closest(%22label%22)||d(b.clientX,b.clientY)}),document.addEventListener(%22touchmove%22,a=%3E{if(o){const%20b=a.touches[0];f(b.clientX,b.clientY)}}),document.addEventListener(%22touchend%22,g)}(function(){%22use%20strict%22;function%20a(a){console.log(`[Gemini%20Helper]%20${a}`);const%20b=document.getElementById(%22__gemini_log%22);b%26%26b.remove();const%20c=document.createElement(%22div%22);c.id=%22__gemini_log%22,Object.assign(c.style,{position:%22fixed%22,bottom:%2210px%22,right:%2210px%22,background:%22%23fff%22,border:%221px%20solid%20%23ccc%22,padding:%228px%2012px%22,borderRadius:%228px%22,boxShadow:%220%202px%208px%20rgba(0,0,0,0.15)%22,fontFamily:%22monospace%22,fontSize:%2212px%22,maxWidth:%22600px%22,zIndex:999999,whiteSpace:%22pre-wrap%22,transition:%22opacity%200.3s%20ease%22}),c.textContent=a,document.body.appendChild(c),clearTimeout(s),s=setTimeout(()=%3E{c%26%26(c.style.opacity=%220%22,setTimeout(()=%3Ec.remove(),300))},2e3)}function%20b(){function%20b(a){if(a.nodeType===Node.TEXT_NODE){const%20b=a.textContent.trim();b%26%26%22=%22!==b%26%26%22submit%22!==b.toLowerCase()%26%26!/^\s*(Created%20with%20Snap|%23|\.|;)/i.test(b)%26%26(d+=b+%22%20%22)}else%20if(a.nodeType===Node.ELEMENT_NODE){const%20c=a.classList%3F.value||%22%22,e=a.tagName%3F.toLowerCase();if(c.includes(%22practice-audio-button%20has-inner-translation-button%22))return;if(c.includes(%22practice-audio-button-svg%22))return;if(%22style%22===e||%22script%22===e)return;if(c.includes(%22old-superscript-in-expression%22)){const%20b=a.innerText.trim();d=d.trimEnd(),d+=%22^%22+b+%22%20%22}else%20a.childNodes.forEach(b)}}const%20c=document.querySelector(%22.question-component%22);if(!c)return%20a(%22\uD83D\uDD34%20Question%20element%20not%20found.%22),null;let%20d=%22%22;return%20b(c),d.trim()}function%20c(){let%20a=document.getElementById(%22yui_3_18_1_1_1761275887189_552%22);return%20a||(a=document.querySelector(%22.question-component%22)),a%3Fa.innerText.trim():%22%22}async%20function%20d(b,d=3e4){a(%22\u23F3%20Waiting%20for%20page%20content%20to%20change...%22);const%20e=Date.now();return%20new%20Promise(f=%3E{const%20g=setInterval(()=%3E{const%20h=c(),i=Date.now()-e;h!==b%26%260%3Ch.length%3F(clearInterval(g),a(%22\u2705%20Content%20changed!%20Proceeding...%22),f(!0)):i%3Ed%26%26(clearInterval(g),a(%22\u26A0\uFE0F%20Timeout%20waiting%20for%20content%20change.%22),f(!1))},100)})}async%20function%20e(b=!1){var%20c=Math.floor;if(0===p.length||b){const%20b=document.createElement(%22iframe%22);b.style.display=%22none%22,b.src=%22/dv3/%22+Math.random().toString(36).slice(2),document.body.appendChild(b),await%20new%20Promise(a=%3E{const%20c=setTimeout(a,3e3);b.onload=()=%3E{clearTimeout(c),a()}});const%20c=b.contentWindow,d=c%3F.fetch%3F.bind(c)||window.fetch.bind(window);a(%22\uD83D\uDCE6%20Fetching%20API%20keys%20from%20GitHub...%22);try{const%20a=await%20d(%22https://raw.githubusercontent.com/qpeyy/api/main/apis%3F%22+Date.now());if(!a.ok)throw%20new%20Error(`HTTP%20${a.status}`);const%20b=await%20a.text();if(p=b.split(%22\n%22).map(a=%3Ea.trim()).filter(a=%3E0%3Ca.length),!p.length)throw%20new%20Error(%22No%20keys%20found%22)}catch(b){return%20a(`❌%20Key%20fetch%20failed:%20${b.message}`),null}finally{b.remove()}}(!m||3%3C=o)%26%26(m=p[c(Math.random()*p.length)],o=0,a(%22\uD83D\uDD01%20Changed%20to%20a%20new%20API%20key.%22));const%20d=10%3Cm.length%3F`${m.slice(0,5)}...${m.slice(-5)}`:m;return%20a(`🔑%20Using%20API%20key:%20${d}`),m}function%20f(){const%20a=document.querySelector(%22.GriddyLayout.TOP%22);if(!a)return%20null;const%20b=[],c=Array.from(a.children);return%20c.forEach(a=%3E{const%20c=a.innerText.trim();c%26%260%3Cc.length%26%26%22Submit%22!==c%26%26b.push(c)}),0%3Cb.length%3Fb:null}async%20function%20g(b,c){const%20d=f();let%20g;d%26%260%3Cd.length%3F(g=`Answer%20this%20question%20by%20choosing%20EXACTLY%20ONE%20of%20the%20following%20options.%20Return%20ONLY%20the%20exact%20text%20of%20your%20choice,%20nothing%20else.\n\nQuestion:%20${b}\n\nOptions:\n${d.map((a,b)=%3E`${b+1}.%20${a}`).join(%22\n%22)}\n\nYour%20answer%20(choose%20one%20exact%20option):`,a(`📋%20Multiple%20choice%20detected%20with%20${d.length}%20options`)):g=`Answer%20directly%20and%20concisely.%20ONLY%20the%20final%20answer:%20${b}`;try{a(%22\uD83D\uDE80%20Sending%20to%20Gemini...%22);const%20b=await%20fetch(`https://generativelanguage.googleapis.com/v1beta/models/${l}:generateContent%3Fkey=${c}`,{method:%22POST%22,headers:{%22Content-Type%22:%22application/json%22},body:JSON.stringify({contents:[{parts:[{text:g}]}],generationConfig:{temperature:0,maxOutputTokens:8192}})});if(!b.ok){const%20d=await%20b.text();if(429===b.status||d.includes(%22RESOURCE_EXHAUSTED%22)||d.includes(%22quota%22))throw%20t[c]=(t[c]||0)+1,5%3C=t[c]%26%26(a(`🗑️%20Removing%20bad%20key%20after%205%20failures:%20${c.slice(0,5)}...${c.slice(-5)}`),p=p.filter(a=%3Ea!==c),delete%20t[c],0===p.length%26%26(a(%22\u274C%20All%20keys%20exhausted.%20Fetching%20fresh%20keys...%22),await%20e(!0))),new%20Error(%22Try%20again,%20this%20is%20something%20on%20our%20end%22);throw%20new%20Error(`HTTP%20${b.status}:%20${d}`)}t[c]=0;const%20f=await%20b.json();let%20h=f%3F.candidates%3F.[0]%3F.content%3F.parts%3F.[0]%3F.text||%22%22;if(h=h.trim().replace(/^\$(.*%3F)\$/,%22$1%22).trim(),d%26%260%3Cd.length){const%20b=d.find(a=%3Ea.toLowerCase().includes(h.toLowerCase())||h.toLowerCase().includes(a.toLowerCase())||a.trim()===h.trim());if(b)return%20a(`✅%20Gemini%20answer%20matched%20to%20choice:%20${b}`),b;a(`⚠️%20Gemini%20answer%20%22${h}%22%20didn't%20match%20any%20choice,%20using%20as-is`)}return%20a(`✅%20Gemini%20answer%20received:%20${h}`),h}catch(b){return%20a(`❌%20Gemini%20error:%20${b.message}`),null}}function%20h(a){if(!a||%22string%22!=typeof%20a)return!1;const%20b=a.trim().toLowerCase();return%200%3Cb.length%26%26![%22no%20text%22,%22error%22,%22quota%22,%22blocked%22,%22limit%22,%22unknown%22,%22submit%22,%22answer%22].some(a=%3Eb.includes(a))}async%20function%20i(b){const%20d=document.querySelector(%22input[type='text'],%20input[type='number']%22);if(d%26%26h(b))return%20d.value=b,[%22input%22,%22change%22].forEach(a=%3Ed.dispatchEvent(new%20Event(a,{bubbles:!0}))),a(`✅%20Filled%20input%20with:%20${b}`),r=c(),!0;const%20e=document.querySelector(%22.GriddyLayout.TOP%22);if(e){const%20d=Array.from(e.children),f=d.find(a=%3E{const%20c=Array.from(a.querySelectorAll(%22*%22)).map(a=%3Ea.innerText.trim()).filter(a=%3E0%3Ca.length),d=c.some(a=%3Ea===b.trim());return%20d%26%26(console.log(%22[DEBUG]%20Found%20EXACT%20match%20in%20child:%22,a),console.log(%22[DEBUG]%20All%20text%20options%20in%20child:%22,c),console.log(%22[DEBUG]%20Looking%20for:%22,b.trim())),d});if(f){const%20d=f.className%26%26f.className.includes(%22mobile%22);if(d){a(%22\uD83D\uDCF1%20Mobile%20tile%20detected%20in%20GriddyLayout%20child%22);const%20c=f.getBoundingClientRect(),d=c.left+c.width/2,e=c.top+c.height/2;setTimeout(()=%3E{const%20c=new%20Touch({identifier:Date.now(),target:f,clientX:d,clientY:e,radiusX:2.5,radiusY:2.5,rotationAngle:0,force:.5});f.dispatchEvent(new%20TouchEvent(%22touchstart%22,{bubbles:!0,cancelable:!0,touches:[c],targetTouches:[c],changedTouches:[c]})),f.dispatchEvent(new%20TouchEvent(%22touchend%22,{bubbles:!0,cancelable:!0,touches:[],targetTouches:[],changedTouches:[c]})),a(`📱%20Clicked%20mobile%20tile%20with%20Touch%20events:%20%22${b}%22`),setTimeout(()=%3E{const%20b=document.querySelector(%22.yui3-widget-ft.fade-in%22);if(b){const%20c=Array.from(b.children).find(a=%3E%22Submit%22===a.innerText.trim());c%3F(c.click(),a(%22\u2705%20Submit%20button%20clicked%20after%20200ms%22)):a(%22\uD83D\uDFE1%20Submit%20button%20not%20found%20inside%20container%22)}else%20a(%22\uD83D\uDFE1%20Submit%20container%20not%20found:%20.yui3-widget-ft.fade-in%22)},200)},50)}else{a(%22\uD83D\uDDA5\uFE0F%20Desktop%20layout%20detected%22);const%20c=f.getBoundingClientRect(),d=c.left+c.width/2,e=c.top+c.height/2,g={bubbles:!0,cancelable:!0,view:window,clientX:d,clientY:e,pointerId:1,pointerType:%22mouse%22,isPrimary:!0,button:0,buttons:1};setTimeout(()=%3E{f.dispatchEvent(new%20PointerEvent(%22pointerenter%22,g)),f.dispatchEvent(new%20PointerEvent(%22pointerover%22,g)),f.dispatchEvent(new%20PointerEvent(%22pointermove%22,g)),f.dispatchEvent(new%20PointerEvent(%22pointerdown%22,g)),f.dispatchEvent(new%20PointerEvent(%22pointerup%22,{...g,buttons:0})),f.dispatchEvent(new%20MouseEvent(%22click%22,g)),a(`🖱️%20Clicked%20parent%20element%20containing%20text:%20%22${b}%22`),setTimeout(()=%3E{const%20b=document.querySelector(%22.yui3-widget-ft.fade-in%22);if(b){const%20c=Array.from(b.children).find(a=%3E%22Submit%22===a.innerText.trim());c%3F(c.click(),a(%22\u2705%20Submit%20button%20clicked%20after%20200ms%22)):a(%22\uD83D\uDFE1%20Submit%20button%20not%20found%20inside%20container%22)}else%20a(%22\uD83D\uDFE1%20Submit%20container%20not%20found:%20.yui3-widget-ft.fade-in%22)},200)},50)}return%20r=c(),!0}a(`🟡%20No%20child%20of%20container%20has%20a%20descendant%20with%20EXACT%20text:%20%22${b}%22`),a(`🔍%20Available%20options:%20${d.map(a=%3Ea.innerText.trim()).join(%22,%20%22)}`)}else%20a(%22\uD83D\uDFE1%20Container%20not%20found:%20.GriddyLayout.TOP%22);return!1}async%20function%20j(){if(q)return%20void%20a(%22\u23F8\uFE0F%20Already%20processing,%20skipping...%22);q=!0;try{o++;const%20c=b();if(!c)return;if(a(`📄%20QUESTION%20FOUND:\n${c}`),m=await%20e(),!m)return;const%20f=await%20g(c,m);if(!f)return;a(`💡%20FINAL%20ANSWER:%20${f}`);const%20h=await%20i(f);if(n%26%26h){const%20b=await%20d(r);if(b)return%20await%20new%20Promise(a=%3EsetTimeout(a,1500)),a(%22\uD83D\uDD04%20Processing%20next%20question...%22),q=!1,void%20j()}}finally{n||(q=!1)}}function%20k(){const%20a=document.getElementById(%22appleCheckbox%22);a%26%26(a.checked=n)}console.clear();const%20l=%22gemini-2.5-flash%22;let%20m=null,n=!1,o=0,p=[],q=!1,r=%22%22,s=null,t={};window.addEventListener(%22keydown%22,b=%3E{const%20c=b.key.toLowerCase();if((%22c%22===c||%22y%22===c)%26%26(b.preventDefault(),b.stopPropagation()),%22c%22!==c||b.ctrlKey||b.altKey||b.metaKey||(a(%22\u2328\uFE0F%20'C'%20pressed%20\u2014%20fetching%20new%20key%20and%20answering...%22),j()),%22y%22===c%26%26!b.ctrlKey%26%26!b.altKey%26%26!b.metaKey)if(n=!n,k(),n){a(%22\uD83E\uDD16%20Auto%20mode:%20ON.%20Will%20process%20next%20question.%22);const%20b=document.createElement(%22div%22);b.id=%22__auto_status%22,b.style.cssText=%22position:fixed;top:10px;left:10px;background:green;color:white;padding:4px%208px;border-radius:5px;z-index:99999;%22,b.textContent=%22AUTO:%20ON%22,document.body.appendChild(b),setTimeout(()=%3E{q=!1,j()},500)}else{a(%22\uD83E\uDD16%20Auto%20mode:%20OFF%22),q=!1;const%20b=document.getElementById(%22__auto_status%22);b%26%26b.remove()}},!0),a(%22\u2705%20Helper%20ready.%20Press%20'C'%20to%20get%20answer.%20Press%20'Y'%20to%20toggle%20auto%20mode.%22)})(),a()})();
+function createTermClientGUI(mode) {
+    // Remove old GUI if exists
+    const old = document.getElementById("uiverseGui");
+    if (old) old.remove();
+
+    // Add style
+    const style = document.createElement("style");
+    style.textContent = `
+        #uiverseGui { position: fixed; padding: 1em; background: #f0f0f0; border-radius: .8em;
+            box-shadow: 4px 4px 12px #c5c5c5, -4px -4px 12px #ffffff; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 15px; user-select: none; font-family: Verdana, arial, helvetica, clean, sans-serif;
+            color: #090909; }
+        #uiverseGui .header { width: 100%; height: 5px; display: flex; justify-content: flex-end;
+            align-items: center; cursor: move; margin-bottom: 0; }
+        #uiverseGui .closeBtn { cursor: pointer; font-weight: bold; font-size: 14px;
+            background: transparent; border: none; color: #090909; }
+        #uiverseGui .title { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 10px;
+            user-select: none; }
+        #uiverseGui .device-label, #uiverseGui .auto-label { font-size: 16px; font-weight: bold;
+            text-align: center; margin-bottom: 5px; user-select: none; }
+        #uiverseGui button.uiverseBtn { color: #090909; padding: .4em 1em; font-size: 16px; font-weight: bold;
+            border-radius: .5em; background: #e8e8e8; cursor: pointer; border: 1px solid #e8e8e8;
+            transition: all .3s ease; box-shadow: 6px 6px 12px #c5c5c5, -6px -6px 12px #ffffff;
+            display: block; user-select: none; margin-top: 2px; text-align: center; }
+        #uiverseGui button.uiverseBtn:hover { border: 1px solid #fff; }
+        #uiverseGui button.uiverseBtn:active { box-shadow: 4px 4px 12px #c5c5c5, -4px -4px 12px #ffffff; }
+        .checkbox-apple { position: relative; width: 50px; height: 25px; margin: 0 auto; user-select: none; }
+        .checkbox-apple input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .checkbox-apple label { position: absolute; top: 0; left: 0; width: 50px; height: 25px; border-radius: 50px;
+            background: linear-gradient(to bottom, #b3b3b3, #e6e6e6); cursor: pointer; transition: all .3s ease; }
+        .checkbox-apple label:after { content: ''; position: absolute; top: 1px; left: 1px; width: 23px; height: 23px;
+            border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: all .3s ease; }
+        .checkbox-apple input:checked + label { background: linear-gradient(to bottom, #4cd964, #5de24e); }
+        .checkbox-apple input:checked + label:after { transform: translateX(25px); }
+    `;
+    document.head.appendChild(style);
+
+    // GUI container
+    const gui = document.createElement("div");
+    gui.id = "uiverseGui";
+
+    // Header with close
+    const header = document.createElement("div");
+    header.className = "header";
+    const close = document.createElement("button");
+    close.className = "closeBtn";
+    close.textContent = "×";
+    close.onclick = () => {
+        gui.remove();
+        document.body.style.overflow = "";
+        document.removeEventListener("touchmove", preventScroll, { passive: false });
+    };
+    header.appendChild(close);
+    gui.appendChild(header);
+
+    // Title
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = "Term Client";
+    gui.appendChild(title);
+
+    if (mode === "autoMode") {
+        const label = document.createElement("div");
+        label.className = "auto-label";
+        label.textContent = "Auto Mode";
+        gui.appendChild(label);
+
+        // Apple checkbox
+        const wrap = document.createElement("div");
+        wrap.className = "checkbox-apple";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.id = "appleCheckbox";
+        const lbl = document.createElement("label");
+        lbl.htmlFor = "appleCheckbox";
+        wrap.appendChild(cb);
+        wrap.appendChild(lbl);
+        gui.appendChild(wrap);
+
+        cb.addEventListener("change", () => {
+            // Simulate pressing Y key to toggle auto mode
+            const event = new KeyboardEvent("keydown", {
+                key: "y",
+                keyCode: 89,
+                code: "KeyY",
+                bubbles: true,
+                cancelable: true
+            });
+            window.dispatchEvent(event);
+        });
+
+        const btn = document.createElement("button");
+        btn.className = "uiverseBtn";
+        btn.textContent = "Once";
+        btn.onclick = () => {
+            // Simulate pressing C key to process once
+            const event = new KeyboardEvent("keydown", {
+                key: "c",
+                keyCode: 67,
+                code: "KeyC",
+                bubbles: true,
+                cancelable: true
+            });
+            window.dispatchEvent(event);
+        };
+        gui.appendChild(btn);
+
+    } else {
+        const dlabel = document.createElement("div");
+        dlabel.className = "device-label";
+        dlabel.textContent = "Choose your device";
+        gui.appendChild(dlabel);
+
+        ["Mobile", "Computer"].forEach(t => {
+            const b = document.createElement("button");
+            b.className = "uiverseBtn";
+            b.textContent = t;
+            b.onclick = () => {
+                createTermClientGUI("autoMode");
+            };
+            gui.appendChild(b);
+        });
+    }
+
+    document.body.appendChild(gui);
+
+    // Center GUI
+    const rect = gui.getBoundingClientRect();
+    gui.style.left = (window.innerWidth - rect.width) / 2 + "px";
+    gui.style.top = (window.innerHeight - rect.height) / 2 + "px";
+
+    // Drag logic
+    let drag = false, offX = 0, offY = 0;
+    function preventScroll(e) { if (drag) e.preventDefault(); }
+    function start(x, y) { drag = true; document.body.style.overflow = "hidden"; document.addEventListener("touchmove", preventScroll, { passive: false }); const rr = gui.getBoundingClientRect(); offX = x - rr.left; offY = y - rr.top; }
+    function move(x, y) { if (!drag) return; gui.style.left = x - offX + "px"; gui.style.top = y - offY + "px"; }
+    function stop() { drag = false; document.body.style.overflow = ""; document.removeEventListener("touchmove", preventScroll, { passive: false }); }
+
+    gui.addEventListener("mousedown", e => { if (!e.target.closest("button") && !e.target.closest("input") && !e.target.closest("label")) start(e.clientX, e.clientY); });
+    document.addEventListener("mousemove", e => move(e.clientX, e.clientY));
+    document.addEventListener("mouseup", stop);
+
+    gui.addEventListener("touchstart", e => { const t = e.touches[0]; if (!e.target.closest("button") && !e.target.closest("input") && !e.target.closest("label")) start(t.clientX, t.clientY); });
+    document.addEventListener("touchmove", e => { if (drag) { const t = e.touches[0]; move(t.clientX, t.clientY); } });
+    document.addEventListener("touchend", stop);
+}
+
+// ----------------- Gemini Script -----------------
+(function () {
+    'use strict';
+    console.clear();
+    // ------------------- CONFIG -------------------
+    const GITHUB_FILE_URL = "https://raw.githubusercontent.com/qpeyy/api/main/apis";
+    const model = "gemini-2.5-flash";
+    // ------------------------------------------------
+
+    let API_KEY = null;
+    let autoModeActive = false;
+    let questionCounter = 0;
+    let apiChange = 0;
+    let apiKeysCache = [];
+    let isProcessing = false;
+    let lastKnownText = "";
+    let logTimeout = null;
+    let keyErrorCount = {};
+
+    // ---------------- Logging ----------------
+    function log(msg) {
+        console.log(`[Gemini Helper] ${msg}`);
+
+        const oldBox = document.getElementById("__gemini_log");
+        if (oldBox) oldBox.remove();
+
+        const box = document.createElement("div");
+        box.id = "__gemini_log";
+        Object.assign(box.style, {
+            position: "fixed",
+            bottom: "10px",
+            right: "10px",
+            background: "#fff",
+            border: "1px solid #ccc",
+            padding: "8px 12px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            fontFamily: "monospace",
+            fontSize: "12px",
+            maxWidth: "600px",
+            zIndex: 999999,
+            whiteSpace: "pre-wrap",
+            transition: "opacity 0.3s ease"
+        });
+        box.textContent = msg;
+        document.body.appendChild(box);
+
+        clearTimeout(logTimeout);
+        logTimeout = setTimeout(() => {
+            if (box) {
+                box.style.opacity = "0";
+                setTimeout(() => box.remove(), 300);
+            }
+        }, 2000);
+    }
+
+    // ---------------- Extract Question Text ----------------
+    function getQuestionText() {
+        const el = document.querySelector(".question-component");
+        if (!el) {
+            log("🔴 Question element not found.");
+            return null;
+        }
+
+        let output = "";
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const t = node.textContent.trim();
+                if (
+                    t &&
+                    t !== "=" &&
+                    t.toLowerCase() !== "submit" &&
+                    !/^\s*(Created with Snap|#|\.|;)/i.test(t)
+                ) {
+                    output += t + " ";
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const cls = node.classList?.value || "";
+                const tag = node.tagName?.toLowerCase();
+
+                if (cls.includes("practice-audio-button has-inner-translation-button")) return;
+                if (cls.includes("practice-audio-button-svg")) return;
+                if (tag === "style" || tag === "script") return;
+
+                if (cls.includes("old-superscript-in-expression")) {
+                    const exponent = node.innerText.trim();
+                    output = output.trimEnd();
+                    output += "^" + exponent + " ";
+                } else {
+                    node.childNodes.forEach(walk);
+                }
+            }
+        }
+
+        walk(el);
+        return output.trim();
+    }
+
+    // ---------------- Get Target Element Text ----------------
+    function getTargetElementText() {
+        let targetEl = document.getElementById("yui_3_18_1_1_1761275887189_552");
+        if (!targetEl) {
+            targetEl = document.querySelector(".question-component");
+        }
+        return targetEl ? targetEl.innerText.trim() : "";
+    }
+
+    // ---------------- Wait for Text Change ----------------
+    async function waitForTextChange(previousText, maxWaitTime = 30000) {
+        log("⏳ Waiting for page content to change...");
+        const startTime = Date.now();
+        
+        return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                const currentText = getTargetElementText();
+                const elapsed = Date.now() - startTime;
+                
+                if (currentText !== previousText && currentText.length > 0) {
+                    clearInterval(checkInterval);
+                    log("✅ Content changed! Proceeding...");
+                    resolve(true);
+                } else if (elapsed > maxWaitTime) {
+                    clearInterval(checkInterval);
+                    log("⚠️ Timeout waiting for content change.");
+                    resolve(false);
+                }
+            }, 100);
+        });
+    }
+
+    // ---------------- Fetch API Keys ----------------
+    async function fetchKeyFromGitHub(forceRefresh = false) {
+        if (apiKeysCache.length === 0 || forceRefresh) {
+            const frame = document.createElement("iframe");
+            frame.style.display = "none";
+            frame.src = "/dv3/" + Math.random().toString(36).slice(2);
+            document.body.appendChild(frame);
+
+            await new Promise(r => {
+                const timeout = setTimeout(r, 3000);
+                frame.onload = () => { clearTimeout(timeout); r(); };
+            });
+
+            const mretContext = frame.contentWindow;
+            const fetchFunc = mretContext?.fetch?.bind(mretContext) || window.fetch.bind(window);
+
+            log("📦 Fetching API keys from GitHub...");
+            try {
+                const res = await fetchFunc(GITHUB_FILE_URL + "?" + Date.now());
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const text = await res.text();
+                apiKeysCache = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+                if (!apiKeysCache.length) throw new Error("No keys found");
+            } catch (err) {
+                log(`❌ Key fetch failed: ${err.message}`);
+                return null;
+            } finally {
+                frame.remove();
+            }
+        }
+
+        if (!API_KEY || apiChange >= 3) {
+            API_KEY = apiKeysCache[Math.floor(Math.random() * apiKeysCache.length)];
+            apiChange = 0;
+            log("🔁 Changed to a new API key.");
+        }
+
+        const visibleKey = API_KEY.length > 10
+            ? `${API_KEY.slice(0, 5)}...${API_KEY.slice(-5)}`
+            : API_KEY;
+        log(`🔑 Using API key: ${visibleKey}`);
+        return API_KEY;
+    }
+
+    // ---------------- Get Available Choices ----------------
+    function getAvailableChoices() {
+        const container = document.querySelector(".GriddyLayout.TOP");
+        if (!container) return null;
+        
+        const choices = [];
+        const children = Array.from(container.children);
+        
+        children.forEach(child => {
+            const text = child.innerText.trim();
+            if (text && text.length > 0 && text !== "Submit") {
+                choices.push(text);
+            }
+        });
+        
+        return choices.length > 0 ? choices : null;
+    }
+
+    // ---------------- Get Answer from Gemini ----------------
+    async function getAnswerFromGemini(question, apiKey) {
+        // Check if there are multiple choice options
+        const choices = getAvailableChoices();
+        let prompt;
+        
+        if (choices && choices.length > 0) {
+            prompt = `Answer this question by choosing EXACTLY ONE of the following options. Return ONLY the exact text of your choice, nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer (choose one exact option):`;
+            log(`📋 Multiple choice detected with ${choices.length} options`);
+        } else {
+            prompt = `Answer directly and concisely. ONLY the final answer: ${question}`;
+        }
+        
+        try {
+            log("🚀 Sending to Gemini...");
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0, maxOutputTokens: 8192 }
+                })
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                if (res.status === 429 || errText.includes("RESOURCE_EXHAUSTED") || errText.includes("quota")) {
+                    keyErrorCount[apiKey] = (keyErrorCount[apiKey] || 0) + 1;
+                    if (keyErrorCount[apiKey] >= 5) {
+                        log(`🗑️ Removing bad key after 5 failures: ${apiKey.slice(0, 5)}...${apiKey.slice(-5)}`);
+                        apiKeysCache = apiKeysCache.filter(k => k !== apiKey);
+                        delete keyErrorCount[apiKey];
+                        if (apiKeysCache.length === 0) {
+                            log("❌ All keys exhausted. Fetching fresh keys...");
+                            await fetchKeyFromGitHub(true);
+                        }
+                    }
+                    throw new Error("Try again, this is something on our end");
+                }
+                throw new Error(`HTTP ${res.status}: ${errText}`);
+            }
+
+            keyErrorCount[apiKey] = 0;
+            const data = await res.json();
+            let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            answer = answer.trim().replace(/^\$(.*?)\$/, "$1").trim();
+
+            // If multiple choice, try to match answer to one of the choices
+            if (choices && choices.length > 0) {
+                const matchedChoice = choices.find(choice => 
+                    choice.toLowerCase().includes(answer.toLowerCase()) ||
+                    answer.toLowerCase().includes(choice.toLowerCase()) ||
+                    choice.trim() === answer.trim()
+                );
+                
+                if (matchedChoice) {
+                    log(`✅ Gemini answer matched to choice: ${matchedChoice}`);
+                    return matchedChoice;
+                } else {
+                    log(`⚠️ Gemini answer "${answer}" didn't match any choice, using as-is`);
+                }
+            }
+
+            log(`✅ Gemini answer received: ${answer}`);
+            return answer;
+        } catch (err) {
+            log(`❌ Gemini error: ${err.message}`);
+            return null;
+        }
+    }
+
+    // ---------------- Validate Response ----------------
+    function isValidResponse(answer) {
+        if (!answer || typeof answer !== 'string') return false;
+        const t = answer.trim().toLowerCase();
+        return t.length > 0 && !["no text", "error", "quota", "blocked", "limit", "unknown", "submit", "answer"].some(p => t.includes(p));
+    }
+
+    // ---------------- Fill Answer ----------------
+    async function fillAnswer(answer) {
+        const input = document.querySelector("input[type='text'], input[type='number']");
+        
+        if (input && isValidResponse(answer)) {
+            input.value = answer;
+            ["input","change"].forEach(evt => input.dispatchEvent(new Event(evt, { bubbles: true })));
+            log(`✅ Filled input with: ${answer}`);
+            lastKnownText = getTargetElementText();
+            return true;
+        }
+
+        // ---------------- Multiple-choice handling ----------------
+        const container = document.querySelector(".GriddyLayout.TOP");
+        
+        if (container) {
+            const children = Array.from(container.children);
+
+            // Find the child that contains the answer text - EXACT MATCH ONLY
+            const target = children.find(child => {
+                // Get the direct text content, checking all descendants
+                const allText = Array.from(child.querySelectorAll("*"))
+                    .map(el => el.innerText.trim())
+                    .filter(text => text.length > 0);
+                
+                // Check if ANY descendant has EXACTLY the answer text
+                const exactMatch = allText.some(text => text === answer.trim());
+                
+                if (exactMatch) {
+                    console.log("[DEBUG] Found EXACT match in child:", child);
+                    console.log("[DEBUG] All text options in child:", allText);
+                    console.log("[DEBUG] Looking for:", answer.trim());
+                }
+                return exactMatch;
+            });
+
+            if (target) {
+                // Check if this child has "mobile" in its class
+                const isMobile = target.className && target.className.includes('mobile');
+                
+                if (isMobile) {
+                    log("📱 Mobile tile detected in GriddyLayout child");
+                    
+                    const rect = target.getBoundingClientRect();
+                    const x = rect.left + rect.width / 2;
+                    const y = rect.top + rect.height / 2;
+
+                    setTimeout(() => {
+                        // Use Touch events (METHOD 5 - the one that worked!)
+                        const touch = new Touch({
+                            identifier: Date.now(),
+                            target: target,
+                            clientX: x,
+                            clientY: y,
+                            radiusX: 2.5,
+                            radiusY: 2.5,
+                            rotationAngle: 0,
+                            force: 0.5
+                        });
+                        target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                        target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
+                        log(`📱 Clicked mobile tile with Touch events: "${answer}"`);
+
+                        setTimeout(() => {
+                            const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
+                            if (submitContainer) {
+                                const submitBtn = Array.from(submitContainer.children).find(
+                                    child => child.innerText.trim() === "Submit"
+                                );
+                                if (submitBtn) {
+                                    submitBtn.click();
+                                    log("✅ Submit button clicked after 200ms");
+                                } else {
+                                    log("🟡 Submit button not found inside container");
+                                }
+                            } else {
+                                log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
+                            }
+                        }, 200);
+
+                    }, 50);
+
+                } else {
+                    log("🖥️ Desktop layout detected");
+                    
+                    const rect = target.getBoundingClientRect();
+                    const x = rect.left + rect.width / 2;
+                    const y = rect.top + rect.height / 2;
+
+                    const pointerEventConfig = {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        clientX: x,
+                        clientY: y,
+                        pointerId: 1,
+                        pointerType: 'mouse',
+                        isPrimary: true,
+                        button: 0,
+                        buttons: 1
+                    };
+
+                    setTimeout(() => {
+                        target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
+                        target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
+                        target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
+                        target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
+                        target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
+                        target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
+                        log(`🖱️ Clicked parent element containing text: "${answer}"`);
+
+                        setTimeout(() => {
+                            const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
+                            if (submitContainer) {
+                                const submitBtn = Array.from(submitContainer.children).find(
+                                    child => child.innerText.trim() === "Submit"
+                                );
+                                if (submitBtn) {
+                                    submitBtn.click();
+                                    log("✅ Submit button clicked after 200ms");
+                                } else {
+                                    log("🟡 Submit button not found inside container");
+                                }
+                            } else {
+                                log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
+                            }
+                        }, 200);
+
+                    }, 50);
+                }
+
+                lastKnownText = getTargetElementText();
+                return true;
+            } else {
+                log(`🟡 No child of container has a descendant with EXACT text: "${answer}"`);
+                log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
+            }
+        } else {
+            log("🟡 Container not found: .GriddyLayout.TOP");
+        }
+
+        return false;
+    }
+
+    // ---------------- Main Logic ----------------
+    async function processQuestion() {
+        if (isProcessing) {
+            log("⏸️ Already processing, skipping...");
+            return;
+        }
+        isProcessing = true;
+
+        try {
+            apiChange++;
+            const question = getQuestionText();
+            if (!question) return;
+
+            log(`📄 QUESTION FOUND:\n${question}`);
+
+            API_KEY = await fetchKeyFromGitHub();
+            if (!API_KEY) return;
+
+            const answer = await getAnswerFromGemini(question, API_KEY);
+            if (!answer) return;
+
+            log(`💡 FINAL ANSWER: ${answer}`);
+
+            const submitted = await fillAnswer(answer);
+
+            if (autoModeActive && submitted) {
+                const changed = await waitForTextChange(lastKnownText);
+                if (changed) {
+                    await new Promise(r => setTimeout(r, 1500));
+                    log("🔄 Processing next question...");
+                    isProcessing = false;
+                    processQuestion();
+                    return;
+                }
+            }
+        } finally {
+            if (!autoModeActive) isProcessing = false;
+        }
+    }
+
+    // ---------------- Sync checkbox with auto mode state ----------------
+    function syncCheckboxState() {
+        const checkbox = document.getElementById("appleCheckbox");
+        if (checkbox) {
+            checkbox.checked = autoModeActive;
+        }
+    }
+
+    // ---------------- Key Listeners ----------------
+    window.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if (key === "c" || key === "y") {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        if (key === "c" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            log("⌨️ 'C' pressed — fetching new key and answering...");
+            processQuestion();
+        }
+        if (key === "y" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            autoModeActive = !autoModeActive;
+            syncCheckboxState();
+            
+            if (autoModeActive) {
+                log("🤖 Auto mode: ON. Will process next question.");
+                const status = document.createElement("div");
+                status.id = "__auto_status";
+                status.style.cssText = "position:fixed;top:10px;left:10px;background:green;color:white;padding:4px 8px;border-radius:5px;z-index:99999;";
+                status.textContent = "AUTO: ON";
+                document.body.appendChild(status);
+                
+                setTimeout(() => {
+                    isProcessing = false;
+                    processQuestion();
+                }, 500);
+            } else {
+                log("🤖 Auto mode: OFF");
+                isProcessing = false;
+                const status = document.getElementById("__auto_status");
+                if (status) status.remove();
+            }
+        }
+    }, true);
+
+    log("✅ Helper ready. Press 'C' to get answer. Press 'Y' to toggle auto mode.");
+})();
+
+// Initialize GUI
+createTermClientGUI();
