@@ -330,30 +330,50 @@ function createTermClientGUI(mode) {
             container = document.querySelector(".VerticalLayout");
         }
         
-        if (!container) return null;
+        if (!container) return { choices: null, isMultipleSelect: false };
         
         const choices = [];
         const children = Array.from(container.children);
+        let isMultipleSelect = false;
         
         children.forEach(child => {
             const text = child.innerText.trim();
             if (text && text.length > 0 && text !== "Submit") {
                 choices.push(text);
             }
+            
+            // Check if any child has MULTIPLE_SELECT class
+            if (child.className && child.className.includes('MULTIPLE_SELECT')) {
+                isMultipleSelect = true;
+            }
+            // Also check descendants for SelectableTile with MULTIPLE_SELECT
+            if (child.querySelector && child.querySelector('.SelectableTile.MULTIPLE_SELECT')) {
+                isMultipleSelect = true;
+            }
         });
         
-        return choices.length > 0 ? choices : null;
+        return {
+            choices: choices.length > 0 ? choices : null,
+            isMultipleSelect: isMultipleSelect
+        };
     }
 
     // ---------------- Get Answer from Gemini ----------------
     async function getAnswerFromGemini(question, apiKey) {
         // Check if there are multiple choice options
-        const choices = getAvailableChoices();
+        const choicesData = getAvailableChoices();
+        const choices = choicesData.choices;
+        const isMultipleSelect = choicesData.isMultipleSelect;
         let prompt;
         
         if (choices && choices.length > 0) {
-            prompt = `Answer this question by choosing EXACTLY ONE of the following options. Return ONLY the exact text of your choice, nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer (choose one exact option):`;
-            log(`📋 Multiple choice detected with ${choices.length} options`);
+            if (isMultipleSelect) {
+                prompt = `Answer this question by choosing ALL correct options from the following list. If there is only one correct answer, return just that one. If there are multiple correct answers, return them separated by commas. Return ONLY the exact text of your choice(s), nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer(s) (comma-separated if multiple):`;
+                log(`📋 Multiple SELECT detected with ${choices.length} options`);
+            } else {
+                prompt = `Answer this question by choosing EXACTLY ONE of the following options. Return ONLY the exact text of your choice, nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer (choose one exact option):`;
+                log(`📋 Single choice detected with ${choices.length} options`);
+            }
         } else {
             prompt = `Answer directly and concisely. ONLY the final answer: ${question}`;
         }
@@ -391,24 +411,52 @@ function createTermClientGUI(mode) {
             const data = await res.json();
             let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
             answer = answer.trim().replace(/^\$(.*?)\$/, "$1").trim();
+            
+            // Remove any leading numbers and periods (e.g., "2. answer" -> "answer")
+            answer = answer.replace(/^\d+\.\s*/, '');
 
             // If multiple choice, try to match answer to one of the choices
             if (choices && choices.length > 0) {
-                const matchedChoice = choices.find(choice => 
-                    choice.toLowerCase().includes(answer.toLowerCase()) ||
-                    answer.toLowerCase().includes(choice.toLowerCase()) ||
-                    choice.trim() === answer.trim()
-                );
-                
-                if (matchedChoice) {
-                    log(`✅ Gemini answer matched to choice: ${matchedChoice}`);
-                    return matchedChoice;
+                if (isMultipleSelect) {
+                    // Split by comma and trim each answer
+                    const answers = answer.split(',').map(a => a.trim().replace(/^\d+\.\s*/, ''));
+                    const matchedChoices = [];
+                    
+                    answers.forEach(ans => {
+                        const matchedChoice = choices.find(choice => 
+                            choice.toLowerCase().includes(ans.toLowerCase()) ||
+                            ans.toLowerCase().includes(choice.toLowerCase()) ||
+                            choice.trim() === ans.trim()
+                        );
+                        if (matchedChoice && !matchedChoices.includes(matchedChoice)) {
+                            matchedChoices.push(matchedChoice);
+                        }
+                    });
+                    
+                    if (matchedChoices.length > 0) {
+                        const result = matchedChoices.join(',');
+                        log(`✅ Gemini answer matched to ${matchedChoices.length} choice(s)`);
+                        return result;
+                    } else {
+                        log(`⚠️ Gemini answers didn't match any choices, using as-is`);
+                    }
                 } else {
-                    log(`⚠️ Gemini answer "${answer}" didn't match any choice, using as-is`);
+                    const matchedChoice = choices.find(choice => 
+                        choice.toLowerCase().includes(answer.toLowerCase()) ||
+                        answer.toLowerCase().includes(choice.toLowerCase()) ||
+                        choice.trim() === answer.trim()
+                    );
+                    
+                    if (matchedChoice) {
+                        log(`✅ Gemini answer matched to choice`);
+                        return matchedChoice;
+                    } else {
+                        log(`⚠️ Gemini answer didn't match any choice, using as-is`);
+                    }
                 }
             }
 
-            log(`✅ Gemini answer received: ${answer}`);
+            log(`✅ Gemini answer received`);
             return answer;
         } catch (err) {
             log(`❌ Gemini error: ${err.message}`);
@@ -435,6 +483,17 @@ function createTermClientGUI(mode) {
             return true;
         }
 
+        // Check if this is a multiple select question
+        const choicesData = getAvailableChoices();
+        const isMultipleSelect = choicesData.isMultipleSelect;
+        
+        // Split answers ONLY if multiple select, otherwise treat as single answer
+        const answers = isMultipleSelect ? answer.split(',').map(a => a.trim()) : [answer];
+        
+        if (isMultipleSelect) {
+            log(`🎯 Processing ${answers.length} answer(s): ${answers.join(', ')}`);
+        }
+
         // ---------------- Multiple-choice handling (GriddyLayout or VerticalLayout) ----------------
         let container = document.querySelector(".GriddyLayout.TOP");
         let layoutType = "GriddyLayout";
@@ -447,145 +506,139 @@ function createTermClientGUI(mode) {
         
         if (container) {
             const children = Array.from(container.children);
+            let clickedCount = 0;
 
-            // Find the child that contains the answer text - EXACT MATCH ONLY
-            const target = children.find(child => {
-                // Get the direct text content using innerText (which concatenates all text nodes)
-                const childText = child.innerText.trim();
-                
-                // Also get text by walking through all text nodes (like getQuestionText does)
-                let walkedText = "";
-                function walkText(node) {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        const t = node.textContent.trim();
-                        if (t && t !== "Submit") {
-                            walkedText += t + " ";
+            // For each answer, find and click the corresponding element
+            for (const singleAnswer of answers) {
+                // Find the child that contains the answer text - EXACT MATCH ONLY
+                const target = children.find(child => {
+                    // Get the direct text content using innerText (which concatenates all text nodes)
+                    const childText = child.innerText.trim();
+                    
+                    // Also get text by walking through all text nodes (like getQuestionText does)
+                    let walkedText = "";
+                    function walkText(node) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            const t = node.textContent.trim();
+                            if (t && t !== "Submit") {
+                                walkedText += t + " ";
+                            }
+                        } else if (node.nodeType === Node.ELEMENT_NODE) {
+                            const tag = node.tagName?.toLowerCase();
+                            if (tag === "style" || tag === "script") return;
+                            node.childNodes.forEach(walkText);
                         }
-                    } else if (node.nodeType === Node.ELEMENT_NODE) {
-                        const tag = node.tagName?.toLowerCase();
-                        if (tag === "style" || tag === "script") return;
-                        node.childNodes.forEach(walkText);
                     }
-                }
-                walkText(child);
-                walkedText = walkedText.trim();
-                
-                // Check both methods for exact match
-                const exactMatchInnerText = childText === answer.trim();
-                const exactMatchWalked = walkedText === answer.trim();
-                
-                if (exactMatchInnerText || exactMatchWalked) {
-                    console.log(`[DEBUG] Found EXACT match in ${layoutType} child:`, child);
-                    console.log("[DEBUG] innerText:", childText);
-                    console.log("[DEBUG] walked text:", walkedText);
-                    console.log("[DEBUG] Looking for:", answer.trim());
-                }
-                return exactMatchInnerText || exactMatchWalked;
-            });
-
-            if (target) {
-                // Check if this child has "mobile" in its class or has SelectableTile with mobile class
-                const isMobile = (target.className && target.className.includes('mobile')) || 
-                                 (target.querySelector && target.querySelector('.SelectableTile.mobile'));
-                
-                if (isMobile) {
-                    log(`📱 Mobile tile detected in ${layoutType} child`);
+                    walkText(child);
+                    walkedText = walkedText.trim();
                     
-                    // If it's a SelectableTile, use that as the actual target
-                    const actualTarget = target.querySelector('.SelectableTile.mobile') || target;
+                    // Check both methods for exact match
+                    const exactMatchInnerText = childText === singleAnswer.trim();
+                    const exactMatchWalked = walkedText === singleAnswer.trim();
                     
-                    const rect = actualTarget.getBoundingClientRect();
-                    const x = rect.left + rect.width / 2;
-                    const y = rect.top + rect.height / 2;
+                    if (exactMatchInnerText || exactMatchWalked) {
+                        console.log(`[DEBUG] Found EXACT match in ${layoutType} child:`, child);
+                        console.log("[DEBUG] innerText:", childText);
+                        console.log("[DEBUG] walked text:", walkedText);
+                        console.log("[DEBUG] Looking for:", singleAnswer.trim());
+                    }
+                    return exactMatchInnerText || exactMatchWalked;
+                });
 
-                    setTimeout(() => {
-                        // Use Touch events (METHOD 5 - the one that worked!)
-                        const touch = new Touch({
-                            identifier: Date.now(),
-                            target: actualTarget,
+                if (target) {
+                    // Check if this child has "mobile" in its class or has SelectableTile with mobile class
+                    const isMobile = (target.className && target.className.includes('mobile')) || 
+                                     (target.querySelector && target.querySelector('.SelectableTile.mobile'));
+                    
+                    if (isMobile) {
+                        log(`📱 Mobile tile detected in ${layoutType} child`);
+                        
+                        // If it's a SelectableTile, use that as the actual target
+                        const actualTarget = target.querySelector('.SelectableTile.mobile') || target;
+                        
+                        const rect = actualTarget.getBoundingClientRect();
+                        const x = rect.left + rect.width / 2;
+                        const y = rect.top + rect.height / 2;
+
+                        await new Promise(resolve => setTimeout(() => {
+                            // Use Touch events (METHOD 5 - the one that worked!)
+                            const touch = new Touch({
+                                identifier: Date.now(),
+                                target: actualTarget,
+                                clientX: x,
+                                clientY: y,
+                                radiusX: 2.5,
+                                radiusY: 2.5,
+                                rotationAngle: 0,
+                                force: 0.5
+                            });
+                            actualTarget.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                            actualTarget.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
+                            log(`📱 Clicked mobile tile with Touch events: "${singleAnswer}"`);
+                            clickedCount++;
+                            resolve();
+                        }, 50));
+
+                    } else {
+                        log(`🖥️ Desktop layout detected in ${layoutType}`);
+                        
+                        const rect = target.getBoundingClientRect();
+                        const x = rect.left + rect.width / 2;
+                        const y = rect.top + rect.height / 2;
+
+                        const pointerEventConfig = {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window,
                             clientX: x,
                             clientY: y,
-                            radiusX: 2.5,
-                            radiusY: 2.5,
-                            rotationAngle: 0,
-                            force: 0.5
-                        });
-                        actualTarget.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
-                        actualTarget.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
-                        log(`📱 Clicked mobile tile with Touch events: "${answer}"`);
+                            pointerId: 1,
+                            pointerType: 'mouse',
+                            isPrimary: true,
+                            button: 0,
+                            buttons: 1
+                        };
 
-                        setTimeout(() => {
-                            const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
-                            if (submitContainer) {
-                                const submitBtn = Array.from(submitContainer.children).find(
-                                    child => child.innerText.trim() === "Submit"
-                                );
-                                if (submitBtn) {
-                                    submitBtn.click();
-                                    log("✅ Submit button clicked after 200ms");
-                                } else {
-                                    log("🟡 Submit button not found inside container");
-                                }
-                            } else {
-                                log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
-                            }
-                        }, 200);
-
-                    }, 50);
-
+                        await new Promise(resolve => setTimeout(() => {
+                            target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
+                            target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
+                            log(`🖱️ Clicked parent element containing text: "${singleAnswer}"`);
+                            clickedCount++;
+                            resolve();
+                        }, 50));
+                    }
                 } else {
-                    log(`🖥️ Desktop layout detected in ${layoutType}`);
-                    
-                    const rect = target.getBoundingClientRect();
-                    const x = rect.left + rect.width / 2;
-                    const y = rect.top + rect.height / 2;
+                    log(`🟡 No child of ${layoutType} has a descendant with EXACT text: "${singleAnswer}"`);
+                    if (isMultipleSelect) {
+                        log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
+                    }
+                }
+            }
 
-                    const pointerEventConfig = {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        clientX: x,
-                        clientY: y,
-                        pointerId: 1,
-                        pointerType: 'mouse',
-                        isPrimary: true,
-                        button: 0,
-                        buttons: 1
-                    };
-
-                    setTimeout(() => {
-                        target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
-                        target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
-                        target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
-                        target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
-                        target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
-                        target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
-                        log(`🖱️ Clicked parent element containing text: "${answer}"`);
-
-                        setTimeout(() => {
-                            const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
-                            if (submitContainer) {
-                                const submitBtn = Array.from(submitContainer.children).find(
-                                    child => child.innerText.trim() === "Submit"
-                                );
-                                if (submitBtn) {
-                                    submitBtn.click();
-                                    log("✅ Submit button clicked after 200ms");
-                                } else {
-                                    log("🟡 Submit button not found inside container");
-                                }
-                            } else {
-                                log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
-                            }
-                        }, 200);
-
-                    }, 50);
+            // After clicking all answers, submit immediately
+            if (clickedCount > 0) {
+                const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
+                if (submitContainer) {
+                    const submitBtn = Array.from(submitContainer.children).find(
+                        child => child.innerText.trim() === "Submit"
+                    );
+                    if (submitBtn) {
+                        submitBtn.click();
+                        log(`✅ Submit button clicked after selecting ${clickedCount} answer(s)`);
+                    } else {
+                        log("🟡 Submit button not found inside container");
+                    }
+                } else {
+                    log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
                 }
 
                 lastKnownText = getTargetElementText();
                 return true;
-            } else {
-                log(`🟡 No child of ${layoutType} has a descendant with EXACT text: "${answer}"`);
+            } else if (isMultipleSelect) {
                 log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
             }
         } else {
@@ -615,8 +668,6 @@ function createTermClientGUI(mode) {
 
             const answer = await getAnswerFromGemini(question, API_KEY);
             if (!answer) return;
-
-            log(`💡 FINAL ANSWER: ${answer}`);
 
             const submitted = await fillAnswer(answer);
 
