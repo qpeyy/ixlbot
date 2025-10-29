@@ -322,7 +322,14 @@ function createTermClientGUI(mode) {
 
     // ---------------- Get Available Choices ----------------
     function getAvailableChoices() {
-        const container = document.querySelector(".GriddyLayout.TOP");
+        // Try GriddyLayout first
+        let container = document.querySelector(".GriddyLayout.TOP");
+        
+        // If not found, try VerticalLayout
+        if (!container) {
+            container = document.querySelector(".VerticalLayout");
+        }
+        
         if (!container) return null;
         
         const choices = [];
@@ -428,38 +435,66 @@ function createTermClientGUI(mode) {
             return true;
         }
 
-        // ---------------- Multiple-choice handling ----------------
-        const container = document.querySelector(".GriddyLayout.TOP");
+        // ---------------- Multiple-choice handling (GriddyLayout or VerticalLayout) ----------------
+        let container = document.querySelector(".GriddyLayout.TOP");
+        let layoutType = "GriddyLayout";
+        
+        // If GriddyLayout not found, try VerticalLayout
+        if (!container) {
+            container = document.querySelector(".VerticalLayout");
+            layoutType = "VerticalLayout";
+        }
         
         if (container) {
             const children = Array.from(container.children);
 
             // Find the child that contains the answer text - EXACT MATCH ONLY
             const target = children.find(child => {
-                // Get the direct text content, checking all descendants
-                const allText = Array.from(child.querySelectorAll("*"))
-                    .map(el => el.innerText.trim())
-                    .filter(text => text.length > 0);
+                // Get the direct text content using innerText (which concatenates all text nodes)
+                const childText = child.innerText.trim();
                 
-                // Check if ANY descendant has EXACTLY the answer text
-                const exactMatch = allText.some(text => text === answer.trim());
+                // Also get text by walking through all text nodes (like getQuestionText does)
+                let walkedText = "";
+                function walkText(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const t = node.textContent.trim();
+                        if (t && t !== "Submit") {
+                            walkedText += t + " ";
+                        }
+                    } else if (node.nodeType === Node.ELEMENT_NODE) {
+                        const tag = node.tagName?.toLowerCase();
+                        if (tag === "style" || tag === "script") return;
+                        node.childNodes.forEach(walkText);
+                    }
+                }
+                walkText(child);
+                walkedText = walkedText.trim();
                 
-                if (exactMatch) {
-                    console.log("[DEBUG] Found EXACT match in child:", child);
-                    console.log("[DEBUG] All text options in child:", allText);
+                // Check both methods for exact match
+                const exactMatchInnerText = childText === answer.trim();
+                const exactMatchWalked = walkedText === answer.trim();
+                
+                if (exactMatchInnerText || exactMatchWalked) {
+                    console.log(`[DEBUG] Found EXACT match in ${layoutType} child:`, child);
+                    console.log("[DEBUG] innerText:", childText);
+                    console.log("[DEBUG] walked text:", walkedText);
                     console.log("[DEBUG] Looking for:", answer.trim());
                 }
-                return exactMatch;
+                return exactMatchInnerText || exactMatchWalked;
             });
 
             if (target) {
-                // Check if this child has "mobile" in its class
-                const isMobile = target.className && target.className.includes('mobile');
+                // Check if this child has "mobile" in its class or has SelectableTile with mobile class
+                const isMobile = (target.className && target.className.includes('mobile')) || 
+                                 (target.querySelector && target.querySelector('.SelectableTile.mobile'));
                 
                 if (isMobile) {
-                    log("📱 Mobile tile detected in GriddyLayout child");
+                    log(`📱 Mobile tile detected in ${layoutType} child`);
                     
-                    const rect = target.getBoundingClientRect();
+                    // If it's a SelectableTile, use that as the actual target
+                    const actualTarget = target.querySelector('.SelectableTile.mobile') || target;
+                    
+                    const rect = actualTarget.getBoundingClientRect();
                     const x = rect.left + rect.width / 2;
                     const y = rect.top + rect.height / 2;
 
@@ -467,7 +502,7 @@ function createTermClientGUI(mode) {
                         // Use Touch events (METHOD 5 - the one that worked!)
                         const touch = new Touch({
                             identifier: Date.now(),
-                            target: target,
+                            target: actualTarget,
                             clientX: x,
                             clientY: y,
                             radiusX: 2.5,
@@ -475,8 +510,8 @@ function createTermClientGUI(mode) {
                             rotationAngle: 0,
                             force: 0.5
                         });
-                        target.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
-                        target.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
+                        actualTarget.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                        actualTarget.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
                         log(`📱 Clicked mobile tile with Touch events: "${answer}"`);
 
                         setTimeout(() => {
@@ -499,7 +534,7 @@ function createTermClientGUI(mode) {
                     }, 50);
 
                 } else {
-                    log("🖥️ Desktop layout detected");
+                    log(`🖥️ Desktop layout detected in ${layoutType}`);
                     
                     const rect = target.getBoundingClientRect();
                     const x = rect.left + rect.width / 2;
@@ -550,11 +585,11 @@ function createTermClientGUI(mode) {
                 lastKnownText = getTargetElementText();
                 return true;
             } else {
-                log(`🟡 No child of container has a descendant with EXACT text: "${answer}"`);
+                log(`🟡 No child of ${layoutType} has a descendant with EXACT text: "${answer}"`);
                 log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
             }
         } else {
-            log("🟡 Container not found: .GriddyLayout.TOP");
+            log("🟡 Container not found: Neither .GriddyLayout.TOP nor .VerticalLayout");
         }
 
         return false;
