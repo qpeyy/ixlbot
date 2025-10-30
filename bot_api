@@ -152,7 +152,7 @@ function createtermkClientGUI(mode) {
     console.clear();
     // ------------------- CONFIG -------------------
     const GITHUB_FILE_URL = "https://raw.githubusercontent.com/qpeyy/api/main/apis";
-    const model = "gemini-2.5-flash";
+    const model = "gemini-2.0-flash-exp";
     // ------------------------------------------------
 
     let API_KEY = null;
@@ -164,6 +164,7 @@ function createtermkClientGUI(mode) {
     let lastKnownText = "";
     let logTimeout = null;
     let keyErrorCount = {};
+    let imageChoiceMap = {}; // Store mapping of image labels to elements
 
     // ---------------- Logging ----------------
     function log(msg) {
@@ -200,6 +201,182 @@ function createtermkClientGUI(mode) {
                 setTimeout(() => box.remove(), 300);
             }
         }, 2000);
+    }
+
+    // ---------------- Label and Extract Image Choices ----------------
+    function labelImageChoices() {
+        // Clear previous mapping
+        imageChoiceMap = {};
+        
+        // Try GriddyLayout first
+        let container = document.querySelector(".GriddyLayout.TOP");
+        
+        // If not found, try VerticalLayout
+        if (!container) {
+            container = document.querySelector(".VerticalLayout");
+        }
+        
+        if (!container) return [];
+
+        const children = Array.from(container.children);
+        const imageChoices = [];
+        
+        children.forEach((child, index) => {
+            // Look for actual content images (not UI elements)
+            // Real images are typically in .raster-image containers or have .image-base class
+            const imgs = Array.from(child.querySelectorAll("img")).filter(img => {
+                const src = img.src || img.getAttribute("src") || "";
+                const imgClass = img.className || "";
+                
+                // Include images that are clearly content images
+                const isContentImage = imgClass.includes("image-base") || 
+                                      img.closest(".raster-image") ||
+                                      src.includes("/~media/");
+                
+                // Exclude UI elements
+                const isUIElement = src.includes("check_mark") || 
+                                   src.includes("icon") || 
+                                   src.includes("/svg/") ||
+                                   src.endsWith(".svg") ||
+                                   img.closest(".CheckMark") ||
+                                   img.closest(".practice-audio-button");
+                
+                return isContentImage && !isUIElement;
+            });
+            
+            if (imgs.length > 0) {
+                const label = `IMAGE_CHOICE_${index + 1}`;
+                
+                // Add data attribute to the parent element for clicking
+                child.setAttribute('data-image-choice', label);
+                
+                // Store the mapping
+                imageChoiceMap[label] = child;
+                
+                imageChoices.push({
+                    label: label,
+                    element: child,
+                    images: imgs
+                });
+                
+                log(`🏷️ Labeled choice as ${label} with ${imgs.length} image(s)`);
+            }
+        });
+        
+        return imageChoices;
+    }
+
+    // ---------------- Extract Images with Labels ----------------
+    async function getImagesFromQuestion() {
+        const el = document.querySelector(".question-component");
+        if (!el) return { questionImages: [], choiceImages: [] };
+
+        const questionImages = [];
+        const choiceImages = [];
+        
+        // First, label image choices in the answer area
+        const imageChoices = labelImageChoices();
+        
+        // Get actual content images from the question, excluding UI elements
+        const imgElements = Array.from(el.querySelectorAll("img")).filter(img => {
+            const src = img.src || img.getAttribute("src") || "";
+            const imgClass = img.className || "";
+            
+            // Include images that are clearly content images
+            const isContentImage = imgClass.includes("image-base") || 
+                                  img.closest(".raster-image") ||
+                                  src.includes("/~media/");
+            
+            // Exclude UI elements
+            const isUIElement = src.includes("check_mark") || 
+                               src.includes("icon") || 
+                               src.includes("/svg/") ||
+                               src.endsWith(".svg") ||
+                               img.closest(".CheckMark") ||
+                               img.closest(".practice-audio-button");
+            
+            return isContentImage && !isUIElement;
+        });
+
+        for (const img of imgElements) {
+            try {
+                // Check if this image is part of a choice
+                let isChoiceImage = false;
+                for (const choice of imageChoices) {
+                    if (choice.images.includes(img)) {
+                        isChoiceImage = true;
+                        break;
+                    }
+                }
+                
+                // Get image source
+                let imgSrc = img.src || img.getAttribute("src");
+                if (!imgSrc) continue;
+
+                log(`🖼️ Found image: ${imgSrc.substring(0, 50)}...`);
+
+                // Convert image to base64
+                const base64Data = await imageToBase64(imgSrc);
+                if (base64Data) {
+                    const imageData = {
+                        inlineData: {
+                            mimeType: getMimeType(imgSrc),
+                            data: base64Data
+                        }
+                    };
+                    
+                    if (isChoiceImage) {
+                        choiceImages.push(imageData);
+                    } else {
+                        questionImages.push(imageData);
+                    }
+                    
+                    log(`✅ Image converted to base64`);
+                }
+            } catch (err) {
+                log(`❌ Error processing image: ${err.message}`);
+            }
+        }
+
+        return { questionImages, choiceImages, imageChoices };
+    }
+
+    // ---------------- Convert Image to Base64 ----------------
+    async function imageToBase64(url) {
+        try {
+            // Fetch image
+            const response = await fetch(url);
+            const blob = await response.blob();
+
+            // Convert blob to base64
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    // Remove data URL prefix (e.g., "data:image/png;base64,")
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            log(`❌ Failed to convert image: ${err.message}`);
+            return null;
+        }
+    }
+
+    // ---------------- Get MIME Type ----------------
+    function getMimeType(url) {
+        const ext = url.split('.').pop().split('?')[0].toLowerCase();
+        const mimeTypes = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'bmp': 'image/bmp'
+        };
+        return mimeTypes[ext] || 'image/jpeg';
     }
 
     // ---------------- Extract Question Text ----------------
@@ -336,9 +513,17 @@ function createtermkClientGUI(mode) {
         const children = Array.from(container.children);
         let isMultipleSelect = false;
         
-        children.forEach(child => {
+        children.forEach((child, index) => {
             const text = child.innerText.trim();
-            if (text && text.length > 0 && text !== "Submit") {
+            
+            // Check if this choice has an image label
+            const imageLabel = child.getAttribute('data-image-choice');
+            
+            if (imageLabel) {
+                // If it has an image, use the label
+                choices.push(imageLabel);
+            } else if (text && text.length > 0 && text !== "Submit") {
+                // Otherwise use the text
                 choices.push(text);
             }
             
@@ -360,14 +545,28 @@ function createtermkClientGUI(mode) {
 
     // ---------------- Get Answer from Gemini ----------------
     async function getAnswerFromGemini(question, apiKey) {
+        // Get images from the question
+        const { questionImages, choiceImages, imageChoices } = await getImagesFromQuestion();
+        
         // Check if there are multiple choice options
         const choicesData = getAvailableChoices();
         const choices = choicesData.choices;
         const isMultipleSelect = choicesData.isMultipleSelect;
         let prompt;
         
+        // Only consider it an image choice question if there are actually image choices
+        const hasImageChoices = imageChoices.length > 0 && choiceImages.length > 0;
+        
         if (choices && choices.length > 0) {
-            if (isMultipleSelect) {
+            if (hasImageChoices) {
+                // Special handling for image choices
+                if (isMultipleSelect) {
+                    prompt = `Look at the images provided in the question. Then look at the choice images. Each choice image is labeled (IMAGE_CHOICE_1, IMAGE_CHOICE_2, etc.). Choose ALL correct image choices that answer the question. Return ONLY the label(s) of your choice(s) (e.g., "IMAGE_CHOICE_1" or "IMAGE_CHOICE_1,IMAGE_CHOICE_2"), nothing else.\n\nQuestion: ${question}\n\nAvailable choices: ${choices.join(', ')}\n\nYour answer (label(s) only):`;
+                } else {
+                    prompt = `Look at the images provided in the question. Then look at the choice images. Each choice image is labeled (IMAGE_CHOICE_1, IMAGE_CHOICE_2, etc.). Choose EXACTLY ONE image choice that best answers the question. Return ONLY the label of your choice (e.g., "IMAGE_CHOICE_1"), nothing else.\n\nQuestion: ${question}\n\nAvailable choices: ${choices.join(', ')}\n\nYour answer (one label only):`;
+                }
+                log(`📋 Image choice question with ${imageChoices.length} image options`);
+            } else if (isMultipleSelect) {
                 prompt = `Answer this question by choosing ALL correct options from the following list. If there is only one correct answer, return just that one. If there are multiple correct answers, return them separated by commas. Return ONLY the exact text of your choice(s), nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer(s) (comma-separated if multiple):`;
                 log(`📋 Multiple SELECT detected with ${choices.length} options`);
             } else {
@@ -379,12 +578,46 @@ function createtermkClientGUI(mode) {
         }
         
         try {
-            log("🚀 Sending to Gemini...");
+            const totalImages = questionImages.length + choiceImages.length;
+            log(`🚀 Sending to Gemini${totalImages > 0 ? ' with ' + totalImages + ' image(s)' : ''}...`);
+            
+            // Build the content array with text and images
+            const contentParts = [{ text: prompt }];
+            
+            // Only add images if they exist and are valid
+            if (questionImages.length > 0) {
+                // Verify images have valid data before adding
+                const validQuestionImages = questionImages.filter(img => 
+                    img.inlineData && img.inlineData.data && img.inlineData.data.length > 0
+                );
+                if (validQuestionImages.length > 0) {
+                    contentParts.push(...validQuestionImages);
+                    log(`📸 Added ${validQuestionImages.length} question image(s)`);
+                }
+            }
+            
+            // Add choice images with their context only if valid
+            if (choiceImages.length > 0 && hasImageChoices) {
+                const validChoiceImages = choiceImages.filter(img => 
+                    img.inlineData && img.inlineData.data && img.inlineData.data.length > 0
+                );
+                if (validChoiceImages.length > 0) {
+                    contentParts.push({ text: "\n\nHere are the choice images:" });
+                    imageChoices.forEach((choice, index) => {
+                        if (index < validChoiceImages.length) {
+                            contentParts.push({ text: `\n${choice.label}:` });
+                            contentParts.push(validChoiceImages[index]);
+                        }
+                    });
+                    log(`🖼️ Added ${validChoiceImages.length} choice image(s)`);
+                }
+            }
+            
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
+                    contents: [{ parts: contentParts }],
                     generationConfig: { temperature: 0, maxOutputTokens: 8192 }
                 })
             });
@@ -412,51 +645,109 @@ function createtermkClientGUI(mode) {
             let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
             answer = answer.trim().replace(/^\$(.*?)\$/, "$1").trim();
             
+            log(`📝 Raw Gemini response: "${answer}"`);
+            
             // Remove any leading numbers and periods (e.g., "2. answer" -> "answer")
             answer = answer.replace(/^\d+\.\s*/, '');
 
             // If multiple choice, try to match answer to one of the choices
             if (choices && choices.length > 0) {
+                log(`🔍 Trying to match answer against ${choices.length} choices`);
+                log(`🔍 Is multiple select: ${isMultipleSelect}`);
+                
                 if (isMultipleSelect) {
-                    // Split by comma and trim each answer
-                    const answers = answer.split(',').map(a => a.trim().replace(/^\d+\.\s*/, ''));
+                    // Split by comma, newline, or "and" to get multiple answers
+                    const answers = answer.split(/,|\n|and /i).map(a => a.trim().replace(/^\d+\.\s*/, '')).filter(a => a.length > 0);
+                    log(`🔍 Split into ${answers.length} answer(s): ${JSON.stringify(answers)}`);
+                    
                     const matchedChoices = [];
                     
                     answers.forEach(ans => {
-                        const matchedChoice = choices.find(choice => 
-                            choice.toLowerCase().includes(ans.toLowerCase()) ||
-                            ans.toLowerCase().includes(choice.toLowerCase()) ||
-                            choice.trim() === ans.trim()
+                        log(`🔍 Trying to match: "${ans}"`);
+                        
+                        // Try exact match first
+                        let matchedChoice = choices.find(choice => 
+                            choice.trim() === ans.trim() ||
+                            choice.toLowerCase().trim() === ans.toLowerCase().trim()
                         );
+                        
+                        if (matchedChoice) {
+                            log(`✅ Exact match found: "${matchedChoice}"`);
+                        }
+                        
+                        // If no exact match, try fuzzy matching
+                        if (!matchedChoice) {
+                            matchedChoice = choices.find(choice => 
+                                choice.toLowerCase().includes(ans.toLowerCase()) ||
+                                ans.toLowerCase().includes(choice.toLowerCase())
+                            );
+                            if (matchedChoice) {
+                                log(`✅ Fuzzy match found: "${matchedChoice}"`);
+                            }
+                        }
+                        
+                        // If still no match, try matching significant words (more than 3 chars)
+                        if (!matchedChoice) {
+                            const ansWords = ans.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                            matchedChoice = choices.find(choice => {
+                                const choiceWords = choice.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                                const matchCount = ansWords.filter(w => choiceWords.some(cw => cw.includes(w) || w.includes(cw))).length;
+                                return matchCount >= Math.min(3, ansWords.length); // Match at least 3 words or all words if less
+                            });
+                            if (matchedChoice) {
+                                log(`✅ Word-based match found: "${matchedChoice}"`);
+                            }
+                        }
+                        
                         if (matchedChoice && !matchedChoices.includes(matchedChoice)) {
                             matchedChoices.push(matchedChoice);
+                        } else if (!matchedChoice) {
+                            log(`❌ No match found for: "${ans}"`);
                         }
                     });
                     
                     if (matchedChoices.length > 0) {
                         const result = matchedChoices.join(',');
-                        log(`✅ Gemini answer matched to ${matchedChoices.length} choice(s)`);
+                        log(`✅ Gemini answer matched to ${matchedChoices.length} choice(s): ${result}`);
                         return result;
                     } else {
-                        log(`⚠️ Gemini answers didn't match any choices, using as-is`);
+                        log(`⚠️ Gemini answers didn't match any choices, using as-is: ${answer}`);
                     }
                 } else {
-                    const matchedChoice = choices.find(choice => 
-                        choice.toLowerCase().includes(answer.toLowerCase()) ||
-                        answer.toLowerCase().includes(choice.toLowerCase()) ||
-                        choice.trim() === answer.trim()
+                    // Try exact match first
+                    let matchedChoice = choices.find(choice => 
+                        choice.trim() === answer.trim() ||
+                        choice.toLowerCase().trim() === answer.toLowerCase().trim()
                     );
                     
+                    // If no exact match, try fuzzy matching
+                    if (!matchedChoice) {
+                        matchedChoice = choices.find(choice => 
+                            choice.toLowerCase().includes(answer.toLowerCase()) ||
+                            answer.toLowerCase().includes(choice.toLowerCase())
+                        );
+                    }
+                    
+                    // If still no match, try matching significant words
+                    if (!matchedChoice) {
+                        const ansWords = answer.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                        matchedChoice = choices.find(choice => {
+                            const choiceWords = choice.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                            const matchCount = ansWords.filter(w => choiceWords.some(cw => cw.includes(w) || w.includes(cw))).length;
+                            return matchCount >= Math.min(3, ansWords.length);
+                        });
+                    }
+                    
                     if (matchedChoice) {
-                        log(`✅ Gemini answer matched to choice`);
+                        log(`✅ Gemini answer matched to choice: ${matchedChoice}`);
                         return matchedChoice;
                     } else {
-                        log(`⚠️ Gemini answer didn't match any choice, using as-is`);
+                        log(`⚠️ Gemini answer didn't match any choice, using as-is: ${answer}`);
                     }
                 }
             }
 
-            log(`✅ Gemini answer received`);
+            log(`✅ Gemini answer received: ${answer}`);
             return answer;
         } catch (err) {
             log(`❌ Gemini error: ${err.message}`);
@@ -494,6 +785,100 @@ function createtermkClientGUI(mode) {
             log(`🎯 Processing ${answers.length} answer(s): ${answers.join(', ')}`);
         }
 
+        // ---------------- Handle image choices ----------------
+        let clickedCount = 0;
+        for (const singleAnswer of answers) {
+            // Check if this is an image choice label
+            if (singleAnswer.startsWith('IMAGE_CHOICE_')) {
+                const targetElement = imageChoiceMap[singleAnswer];
+                if (targetElement) {
+                    log(`🖼️ Found image choice: ${singleAnswer}`);
+                    
+                    // Check if mobile or desktop
+                    const isMobile = (targetElement.className && targetElement.className.includes('mobile')) || 
+                                     (targetElement.querySelector && targetElement.querySelector('.SelectableTile.mobile'));
+                    
+                    if (isMobile) {
+                        const actualTarget = targetElement.querySelector('.SelectableTile.mobile') || targetElement;
+                        const rect = actualTarget.getBoundingClientRect();
+                        const x = rect.left + rect.width / 2;
+                        const y = rect.top + rect.height / 2;
+
+                        await new Promise(resolve => setTimeout(() => {
+                            const touch = new Touch({
+                                identifier: Date.now(),
+                                target: actualTarget,
+                                clientX: x,
+                                clientY: y,
+                                radiusX: 2.5,
+                                radiusY: 2.5,
+                                rotationAngle: 0,
+                                force: 0.5
+                            });
+                            actualTarget.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+                            actualTarget.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
+                            log(`📱 Clicked mobile image choice: ${singleAnswer}`);
+                            clickedCount++;
+                            resolve();
+                        }, 50));
+                    } else {
+                        const rect = targetElement.getBoundingClientRect();
+                        const x = rect.left + rect.width / 2;
+                        const y = rect.top + rect.height / 2;
+
+                        const pointerEventConfig = {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window,
+                            clientX: x,
+                            clientY: y,
+                            pointerId: 1,
+                            pointerType: 'mouse',
+                            isPrimary: true,
+                            button: 0,
+                            buttons: 1
+                        };
+
+                        await new Promise(resolve => setTimeout(() => {
+                            targetElement.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
+                            targetElement.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
+                            targetElement.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
+                            targetElement.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
+                            targetElement.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
+                            targetElement.dispatchEvent(new MouseEvent('click', pointerEventConfig));
+                            log(`🖱️ Clicked desktop image choice: ${singleAnswer}`);
+                            clickedCount++;
+                            resolve();
+                        }, 50));
+                    }
+                    continue;
+                } else {
+                    log(`🔴 Image choice element not found for: ${singleAnswer}`);
+                }
+            }
+        }
+
+        // If we clicked image choices, submit and return
+        if (clickedCount > 0) {
+            const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
+            if (submitContainer) {
+                const submitBtn = Array.from(submitContainer.children).find(
+                    child => child.innerText.trim() === "Submit"
+                );
+                if (submitBtn) {
+                    submitBtn.click();
+                    log(`✅ Submit button clicked after selecting ${clickedCount} image(s)`);
+                } else {
+                    log("🟡 Submit button not found inside container");
+                }
+            } else {
+                log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
+            }
+
+            lastKnownText = getTargetElementText();
+            return true;
+        }
+
         // ---------------- Multiple-choice handling (GriddyLayout or VerticalLayout) ----------------
         let container = document.querySelector(".GriddyLayout.TOP");
         let layoutType = "GriddyLayout";
@@ -506,7 +891,6 @@ function createtermkClientGUI(mode) {
         
         if (container) {
             const children = Array.from(container.children);
-            let clickedCount = 0;
 
             // For each answer, find and click the corresponding element
             for (const singleAnswer of answers) {
@@ -602,7 +986,7 @@ function createtermkClientGUI(mode) {
                         await new Promise(resolve => setTimeout(() => {
                             target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointermkove', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
                             target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
@@ -649,27 +1033,59 @@ function createtermkClientGUI(mode) {
     }
 
     // ---------------- Main Logic ----------------
-    async function processQuestion() {
-        if (isProcessing) {
+    async function processQuestion(retryCount = 0) {
+        const MAX_RETRIES = 5;
+        
+        if (isProcessing && retryCount === 0) {
             log("⏸️ Already processing, skipping...");
             return;
         }
-        isProcessing = true;
+        
+        if (retryCount === 0) {
+            isProcessing = true;
+        }
 
         try {
             apiChange++;
             const question = getQuestionText();
-            if (!question) return;
+            if (!question) {
+                if (autoModeActive && retryCount < MAX_RETRIES) {
+                    log(`⚠️ No question found, retrying in 2s... (${retryCount + 1}/${MAX_RETRIES})`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return processQuestion(retryCount + 1);
+                }
+                return;
+            }
 
             log(`📄 QUESTION FOUND:\n${question}`);
 
             API_KEY = await fetchKeyFromGitHub();
-            if (!API_KEY) return;
+            if (!API_KEY) {
+                if (autoModeActive && retryCount < MAX_RETRIES) {
+                    log(`⚠️ Failed to get API key, retrying in 2s... (${retryCount + 1}/${MAX_RETRIES})`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return processQuestion(retryCount + 1);
+                }
+                return;
+            }
 
             const answer = await getAnswerFromGemini(question, API_KEY);
-            if (!answer) return;
+            if (!answer) {
+                if (autoModeActive && retryCount < MAX_RETRIES) {
+                    log(`⚠️ Failed to get answer from Gemini, retrying in 2s... (${retryCount + 1}/${MAX_RETRIES})`);
+                    await new Promise(r => setTimeout(r, 2000));
+                    return processQuestion(retryCount + 1);
+                }
+                return;
+            }
 
             const submitted = await fillAnswer(answer);
+            
+            if (!submitted && autoModeActive && retryCount < MAX_RETRIES) {
+                log(`⚠️ Failed to submit answer, retrying in 2s... (${retryCount + 1}/${MAX_RETRIES})`);
+                await new Promise(r => setTimeout(r, 2000));
+                return processQuestion(retryCount + 1);
+            }
 
             if (autoModeActive && submitted) {
                 const changed = await waitForTextChange(lastKnownText);
@@ -680,6 +1096,13 @@ function createtermkClientGUI(mode) {
                     processQuestion();
                     return;
                 }
+            }
+        } catch (err) {
+            log(`❌ Unexpected error: ${err.message}`);
+            if (autoModeActive && retryCount < MAX_RETRIES) {
+                log(`⚠️ Retrying due to error... (${retryCount + 1}/${MAX_RETRIES})`);
+                await new Promise(r => setTimeout(r, 2000));
+                return processQuestion(retryCount + 1);
             }
         } finally {
             if (!autoModeActive) isProcessing = false;
