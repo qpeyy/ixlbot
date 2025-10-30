@@ -784,6 +784,8 @@ function createtermkClientGUI(mode) {
         if (isMultipleSelect) {
             log(`🎯 Processing ${answers.length} answer(s): ${answers.join(', ')}`);
         }
+        
+        const expectedClickCount = answers.length;
 
         // ---------------- Handle image choices ----------------
         let clickedCount = 0;
@@ -894,10 +896,13 @@ function createtermkClientGUI(mode) {
 
             // For each answer, find and click the corresponding element
             for (const singleAnswer of answers) {
+                // Normalize the answer for better matching
+                const normalizedAnswer = singleAnswer.trim().replace(/\s+/g, ' ');
+                
                 // Find the child that contains the answer text - EXACT MATCH ONLY
                 const target = children.find(child => {
                     // Get the direct text content using innerText (which concatenates all text nodes)
-                    const childText = child.innerText.trim();
+                    const childText = child.innerText.trim().replace(/\s+/g, ' ');
                     
                     // Also get text by walking through all text nodes (like getQuestionText does)
                     let walkedText = "";
@@ -914,17 +919,17 @@ function createtermkClientGUI(mode) {
                         }
                     }
                     walkText(child);
-                    walkedText = walkedText.trim();
+                    walkedText = walkedText.trim().replace(/\s+/g, ' ');
                     
                     // Check both methods for exact match
-                    const exactMatchInnerText = childText === singleAnswer.trim();
-                    const exactMatchWalked = walkedText === singleAnswer.trim();
+                    const exactMatchInnerText = childText === normalizedAnswer;
+                    const exactMatchWalked = walkedText === normalizedAnswer;
                     
                     if (exactMatchInnerText || exactMatchWalked) {
                         console.log(`[DEBUG] Found EXACT match in ${layoutType} child:`, child);
                         console.log("[DEBUG] innerText:", childText);
                         console.log("[DEBUG] walked text:", walkedText);
-                        console.log("[DEBUG] Looking for:", singleAnswer.trim());
+                        console.log("[DEBUG] Looking for:", normalizedAnswer);
                     }
                     return exactMatchInnerText || exactMatchWalked;
                 });
@@ -945,7 +950,7 @@ function createtermkClientGUI(mode) {
                         const y = rect.top + rect.height / 2;
 
                         await new Promise(resolve => setTimeout(() => {
-                            // Use Touch events (METHOD 5 - the one that worked!)
+                            // Use Touch events for mobile
                             const touch = new Touch({
                                 identifier: Date.now(),
                                 target: actualTarget,
@@ -1003,8 +1008,11 @@ function createtermkClientGUI(mode) {
                 }
             }
 
-            // After clicking all answers, submit immediately
-            if (clickedCount > 0) {
+            // Only submit if ALL expected answers were clicked
+            if (clickedCount === expectedClickCount && clickedCount > 0) {
+                // Add a small delay to ensure all clicks are processed
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
                 const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
                 if (submitContainer) {
                     const submitBtn = Array.from(submitContainer.children).find(
@@ -1012,7 +1020,7 @@ function createtermkClientGUI(mode) {
                     );
                     if (submitBtn) {
                         submitBtn.click();
-                        log(`✅ Submit button clicked after selecting ${clickedCount} answer(s)`);
+                        log(`✅ Submit button clicked after selecting all ${clickedCount} answer(s)`);
                     } else {
                         log("🟡 Submit button not found inside container");
                     }
@@ -1022,6 +1030,9 @@ function createtermkClientGUI(mode) {
 
                 lastKnownText = getTargetElementText();
                 return true;
+            } else if (clickedCount < expectedClickCount) {
+                log(`❌ Only clicked ${clickedCount}/${expectedClickCount} answers. Not submitting.`);
+                return false;
             } else if (isMultipleSelect) {
                 log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
             }
