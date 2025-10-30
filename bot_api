@@ -1,4 +1,4 @@
-function createTermClientGUI(mode) {
+function createtermkClientGUI(mode) {
     // Remove old GUI if exists
     const old = document.getElementById("uiverseGui");
     if (old) old.remove();
@@ -117,7 +117,7 @@ function createTermClientGUI(mode) {
             b.className = "uiverseBtn";
             b.textContent = t;
             b.onclick = () => {
-                createTermClientGUI("autoMode");
+                createtermkClientGUI("autoMode");
             };
             gui.appendChild(b);
         });
@@ -602,7 +602,7 @@ function createTermClientGUI(mode) {
                         await new Promise(resolve => setTimeout(() => {
                             target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
+                            target.dispatchEvent(new PointerEvent('pointermkove', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
                             target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
                             target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
@@ -735,4 +735,4 @@ function createTermClientGUI(mode) {
 })();
 
 // Initialize GUI
-createTermClientGUI();
+createtermkClientGUI();
